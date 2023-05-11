@@ -39,12 +39,12 @@
 #include <functional>
 // --Chronometro library: backend forward declaration-----------------------------
 namespace Chronometro { namespace Backend {
-  // measure elapsed time
-  class Stopwatch;
   // displayed time units
   enum Unit : char {
     ns = 0, us, ms, s, min, h
   };
+  // measure elapsed time
+  class Stopwatch;
   // benchmark function execution
   void execution_speed(std::function<void(void)> function, size_t N = 1000, Unit unit = Unit(-1));
 }}
@@ -58,7 +58,7 @@ namespace Chronometro { inline namespace Frontend {
 namespace Chronometro { namespace Backend {
   class Stopwatch {
     public:
-      Stopwatch(Unit unit = ms);
+      Stopwatch(Unit unit = Unit::ms);
       ~Stopwatch();
       // restart stopwatch
       void start(Unit unit = Unit(-1));
