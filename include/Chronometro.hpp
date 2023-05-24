@@ -51,7 +51,7 @@ namespace Chronometro { namespace Backend {
 namespace Chronometro { inline namespace Frontend {
   using Backend::Unit;
   using Backend::Stopwatch;
-  #define CHRONOMETRO_EXECUTION_SPEED(function, N, unit)
+  #define CHRONOMETRO_EXECUTION_SPEED(function, repetitions, arguments...)
 }}
 // --Chronometro library: backend struct and class definitions--------------------
 namespace Chronometro { namespace Backend {
@@ -96,7 +96,7 @@ namespace Chronometro { namespace Backend {
   {
     // if unit == keep, use previously set unit
     unit_ = (unit == Unit::keep) ? unit_ : unit;
-    
+
     // measure current time
     start_ = std::chrono::high_resolution_clock::now();
   }
@@ -136,31 +136,43 @@ namespace Chronometro { namespace Backend {
         std::cerr << "error: chronometro: invalid unit\n";
     }
   }
-
+  
   Unit appropriate_unit(std::chrono::nanoseconds time)
   {
     auto count = time.count();
-    if (count > 3600e9)
+
+    // display in minute: 10 h < time
+    if (count > 3600e9 * 10)
       return Unit::h;
-    if (count > 60e9)
+
+    // display in minutes: 10 min < time <= 10 h
+    if (count > 60e9 * 10)
       return Unit::min;
-    if (count > 1e9)
+
+    // display in seconds: 10 s < time <= 10 m
+    if (count > 1e9 * 10)
       return Unit::s;
-    if (count > 1e6)
+
+    // display in milliseconds: 10 ms < time <= 10 s
+    if (count > 1e6 * 10)
       return Unit::ms;
-    if (count > 1e3)
+
+    // display in microseconds: 10 us < time <= 10 ms
+    if (count > 1e3 * 10)
       return Unit::us;
+      
+    // display in minute: time <= 10 us
     return Unit::ns;
   }
 }}
 // --Chronometro library: frontend definitions------------------------------------
 namespace Chronometro { inline namespace Frontend {
   #undef  CHRONOMETRO_EXECUTION_SPEED
-  #define CHRONOMETRO_EXECUTION_SPEED(function, N, args...) \
-    {                                                       \
-    Stopwatch stopwatch(true);                              \
-    for (size_t iteration = 0; iteration < N; ++iteration)  \
-      function(args);                                       \
+  #define CHRONOMETRO_EXECUTION_SPEED(function, repetitions, arguments...)   \
+    {                                                                        \
+    Stopwatch stopwatch(true);                                               \
+    for (size_t iteration = 0; iteration < size_t(repetitions); ++iteration) \
+      function(arguments);                                                   \
     }
 }}
 #endif
