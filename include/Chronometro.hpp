@@ -42,49 +42,48 @@ namespace Chronometro { namespace Backend {
   class Stopwatch;
   // displayed time units
   enum class Unit : unsigned char {
-    ns = 0, us, ms, s, min, h, keep, automatic
+    ns = 0, us, ms, s, min, h, automatic
   };
   // returns the appropriate unit to display time
-  Unit appropriate_unit(std::chrono::nanoseconds time);
+  Unit appropriate_unit(std::chrono::high_resolution_clock::duration duration);
 }}
 // --Chronometro library: frontend forward declarations---------------------------
 namespace Chronometro { inline namespace Frontend {
   using Backend::Unit;
   using Backend::Stopwatch;
-  #define CHRONOMETRO_EXECUTION_SPEED(function, repetitions, arguments...)
+
+  template <typename F, typename... A>
+  void execution_speed(const F function, const size_t repetitions, const A... arguments);
+
+  #define CHRONOMETRO_EXECUTION_SPEED(function, repetitions, ...)
 }}
 // --Chronometro library: backend struct and class definitions--------------------
 namespace Chronometro { namespace Backend {
   class Stopwatch {
     public:
-      Stopwatch(const bool display_on_destruction = false, const Unit unit = Unit::automatic) noexcept;
+      Stopwatch(const Unit unit = Unit::automatic, const bool display_on_destruction = false) noexcept;
       ~Stopwatch() noexcept;
       // restart stopwatch
-      void start(const Unit unit = Unit::keep) noexcept;
+      void start(void) noexcept;
       // stop stopwatch and display elapsed time
-      void stop(const Unit unit = Unit::keep) noexcept;
+      void stop(void) noexcept;
     private:
       // if true, elapsed time will be displayed on destruction
       const bool display_on_destruction_;
       // units that will be displayed on stop
       Unit unit_;
-      // starting time
-      std::chrono::system_clock::time_point start_;
+      // starting and ending time
+      std::chrono::high_resolution_clock::time_point start_;
   };
 }}
 // --Chronometro library: backend struct and class member definitions-------------
 namespace Chronometro { namespace Backend {
-  Stopwatch::Stopwatch(const bool display_on_destruction, const Unit unit) noexcept
+  Stopwatch::Stopwatch(const Unit unit, const bool display_on_destruction) noexcept
     : // member initialization list
     display_on_destruction_(display_on_destruction),
     unit_(unit),
     start_(std::chrono::high_resolution_clock::now())
-  {
-    if (unit == Unit::keep) {
-      unit_ = Unit::ms;
-      std::clog << "warning: stopwatch: invalid unit, ms used instead\n";
-    }
-  }
+  {}
 
   Stopwatch::~Stopwatch() noexcept
   {
@@ -92,87 +91,89 @@ namespace Chronometro { namespace Backend {
       stop();
   }
 
-  void Stopwatch::start(const Unit unit) noexcept
+  void Stopwatch::start(void) noexcept
   {
-    // if unit == keep, use previously set unit
-    unit_ = (unit == Unit::keep) ? unit_ : unit;
-
     // measure current time
     start_ = std::chrono::high_resolution_clock::now();
   }
 
-  void Stopwatch::stop(const Unit unit) noexcept
+  void Stopwatch::stop(void) noexcept
   {
-    // measure current time
-    auto stop = std::chrono::high_resolution_clock::now();
-    
-    // if unit == keep, use previously set unit
-    unit_ = (unit == Unit::keep) ? unit_ : unit;
+    // measure duration
+    std::chrono::high_resolution_clock::duration duration = start_ - std::chrono::high_resolution_clock::now();
 
     // display elapsed time in unit_ units
     std::cout << "time elapsed: ";
 
     // if unit_ == automatic, deduce the appropriate unit
-    switch((unit_ == Unit::automatic) ? appropriate_unit(stop - start_) : unit_) {
+    switch((unit_ == Unit::automatic) ? appropriate_unit(duration) : unit_) {
       case Unit::ns:
-        std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start_).count() << "ns\n";
+        std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count() << "ns\n";
         return;
       case Unit::us:
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop - start_).count() << "us\n";
+        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(duration).count() << "us\n";
         return;
       case Unit::ms:
-        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start_).count() << "ms\n";
+        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms\n";
         return;
       case Unit::s:
-        std::cout << std::chrono::duration_cast<std::chrono::seconds>(stop - start_).count() << "s\n";
+        std::cout << std::chrono::duration_cast<std::chrono::seconds>(duration).count() << "s\n";
         return;
       case Unit::min:
-        std::cout << std::chrono::duration_cast<std::chrono::minutes>(stop - start_).count() << "min\n";
+        std::cout << std::chrono::duration_cast<std::chrono::minutes>(duration).count() << "min\n";
         return;
       case Unit::h:
-        std::cout << std::chrono::duration_cast<std::chrono::hours>(stop - start_).count() << "h\n";
+        std::cout << std::chrono::duration_cast<std::chrono::hours>(duration).count() << "h\n";
         return;
       default:
         std::cerr << "error: chronometro: invalid unit\n";
     }
   }
-  
-  Unit appropriate_unit(std::chrono::nanoseconds time)
-  {
-    auto count = time.count();
 
-    // display in minute: 10 h < time
-    if (count > 3600e9 * 10)
+  Unit appropriate_unit(std::chrono::high_resolution_clock::duration duration)
+  {
+    std::chrono::nanoseconds::rep nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+
+    // 10 h < duration
+    if (nanoseconds > 36000000000000)
       return Unit::h;
 
-    // display in minutes: 10 min < time <= 10 h
-    if (count > 60e9 * 10)
+    // 10 min < duration <= 10 h
+    if (nanoseconds > 600000000000)
       return Unit::min;
 
-    // display in seconds: 10 s < time <= 10 m
-    if (count > 1e9 * 10)
+    // 10 s < duration <= 10 m
+    if (nanoseconds > 10000000000)
       return Unit::s;
 
-    // display in milliseconds: 10 ms < time <= 10 s
-    if (count > 1e6 * 10)
+    // 10 ms < duration <= 10 s
+    if (nanoseconds > 10000000)
       return Unit::ms;
 
-    // display in microseconds: 10 us < time <= 10 ms
-    if (count > 1e3 * 10)
+    // 10 us < duration <= 10 ms
+    if (nanoseconds > 10000)
       return Unit::us;
       
-    // display in minute: time <= 10 us
+    // duration <= 10 us
     return Unit::ns;
   }
 }}
 // --Chronometro library: frontend definitions------------------------------------
 namespace Chronometro { inline namespace Frontend {
   #undef  CHRONOMETRO_EXECUTION_SPEED
-  #define CHRONOMETRO_EXECUTION_SPEED(function, repetitions, arguments...)   \
+  #define CHRONOMETRO_EXECUTION_SPEED(function, repetitions, ...)            \
     {                                                                        \
     Stopwatch stopwatch(true);                                               \
     for (size_t iteration = 0; iteration < size_t(repetitions); ++iteration) \
-      function(arguments);                                                   \
+      function(__VA_ARGS__);                                                 \
     }
+
+  template <typename F, typename... A>
+  void execution_speed(const F function, const size_t repetitions, const A... arguments)
+  {
+    Stopwatch stopwatch(Unit::automatic, true);
+    for (size_t iteration = 0; iteration < repetitions; ++iteration)
+      function(arguments...);
+  }
 }}
 #endif
