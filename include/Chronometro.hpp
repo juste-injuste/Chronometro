@@ -29,7 +29,7 @@
 // SOFTWARE.
 //  
 // --versions---------------------------------------------------------------------
-// version 1.0.0 initial release
+// version 1.0 initial release
 // --inclusion guard--------------------------------------------------------------
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
