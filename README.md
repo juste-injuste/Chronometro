@@ -1,29 +1,54 @@
 # Chronometro
-
 Chronometro is a lightweight C++ library that allows you to measure the execution time of functions or code blocks. It provides a simple and convenient way to measure elapsed time with high precision.
 
 ## Usage
+Chronometro offers 3 ways to measure elapsed time:
+* [Stopwatch](#Stopwatch) instance
+* [execution_time](#execution_time) function
+* [CHRONOMETRO_EXECUTION_TIME](#CHRONOMETRO_EXECUTION_TIME) macro
 
-The execution_time function takes the following parameters:
+Chronometro also introduces the [Unit](#Unit) enum class type.
 
-function: The function or code block to measure the execution time of.
-repetitions: The number of times to repeat the measurement.
-Displayed Time Units
-By default, Chronometro automatically determines the appropriate time unit to display based on the measured execution time. However, you can specify a specific time unit if desired. The available time units are:
+### Unit
+The `Unit` enum class type is used to chose the displayed time unit. <br>
+* `automatic` deduces the appropriate time unit<br>
+* `ns` (nanoseconds)<br>
+* `us` (microseconds)<br>
+* `ms` (milliseconds)<br>
+* `s` (seconds)<br>
+* `min` (minutes)<br>
+* `h` (hours)<br>
 
-`ns` (nanoseconds)<br>
-`us` (microseconds)<br>
-`ms` (milliseconds)<br>
-`s` (seconds)<br>
-`min` (minutes)<br>
-`h` (hours)<br>
-To specify a time unit, you can modify the execution_time function call as follows:
+### Stopwatch
+The stopwatch class allows to create a stopwatch in your program. A stopwatch may be stopped or started. When a stopwatch is stopped, it displays the elasped time between the previous start.
 
-Chronometro::execution_time(myFunction, 1000, Chronometro::Unit::ms); // Measure the execution time in milliseconds
+The constructor takes in these optional parameters:<br>
+* [Unit](#Unit) `unit` specifies the units to be used by the stopwatch.
+  * the default is `Unit::automatic`.
+* bool `display_on_destruction` specifies if it should display elapsed time on destruction.
+  * the default is `false`.
+  
+### execution_time
+The execution_time function allows to measure the time it takes to execute a function for a specified number of repetitions.
 
+The function takes in these parameters:<br>
+* F `function` is the function to measure
+* size_t `repetitions` is the amount of function execution repetitions
+* A... `arguments` is used to optionally pass arguments to the function
+
+After all repetitions are done, the elapsed time is displayed using the `Unit::automatic` time unit.
+
+### CHRONOMETRO_EXECUTION_TIME
+The CHRONOMETRO_EXECUTION_TIME macro functions like the [execution_time](#execution_time) function. The difference being that it is a text-replacement macro, meaning the function is not called function pointer indirection, which may be desireable.
+
+The macro takes in these parameters:<br>
+* `function` is the function to measure
+* `repetitions` is the amount of function execution repetitions
+* `...` is used to optionally pass arguments to the function
+
+After all repetitions are done, the elapsed time is displayed using the `Unit::automatic` time unit.
 
 ## Example
-
 You can measure the execution time of a function or code block using the `execution_time` function provided by the Chronometro library. Here's an example:
 
 ```cpp
