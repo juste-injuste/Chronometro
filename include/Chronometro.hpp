@@ -1,10 +1,10 @@
-// --author-----------------------------------------------------------------------
+// --author------------------------------------------------------------------------------
 // 
 // Justin Asselin (juste-injuste)
 // justin.asselin@usherbrooke.ca
 // https://github.com/juste-injuste/Chronometro
 // 
-// --liscence---------------------------------------------------------------------
+// --liscence----------------------------------------------------------------------------
 // 
 // MIT License
 // 
@@ -28,68 +28,63 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //  
-// --versions---------------------------------------------------------------------
+// --versions----------------------------------------------------------------------------
 // version 1.0 initial release
-// --inclusion guard--------------------------------------------------------------
+// --inclusion guard---------------------------------------------------------------------
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
-// --necessary standard libraries-------------------------------------------------
+// --necessary standard libraries--------------------------------------------------------
 #include <chrono>
 #include <iostream>
-// --Chronometro library: backend forward declaration-----------------------------
+#include <iomanip>
+// --Chronometro library: backend forward declaration------------------------------------
 namespace Chronometro { namespace Backend {
   // measure elapsed time
   class Stopwatch;
-  // displayed time units
-  enum class Unit : unsigned char {
-    ns = 0, us, ms, s, min, h, automatic
+
+  // time units for displaying
+  enum class Unit : uint8_t {
+    ns, us, ms, s, min, h, automatic
   };
+
   // returns the appropriate unit to display time
-  Unit appropriate_unit(std::chrono::high_resolution_clock::duration duration);
+  Unit appropriate_unit(const std::chrono::nanoseconds::rep nanoseconds);
 }}
-// --Chronometro library: frontend forward declarations---------------------------
+// --Chronometro library: frontend forward declarations----------------------------------
 namespace Chronometro { inline namespace Frontend {
   using Backend::Unit;
   using Backend::Stopwatch;
 
+  // measure function execution time
   template <typename F, typename... A>
-  void execution_time(const F function, const size_t repetitions, const A... arguments);
+  std::chrono::high_resolution_clock::duration execution_time(const F function, const size_t repetitions, const A... arguments);
 
+  // measure function execution time
   #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
 }}
-// --Chronometro library: backend struct and class definitions--------------------
+// --Chronometro library: backend struct and class definitions---------------------------
 namespace Chronometro { namespace Backend {
   class Stopwatch {
     public:
-      Stopwatch(const Unit unit = Unit::automatic, const bool display_on_destruction = false) noexcept;
-      ~Stopwatch() noexcept;
+      inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
       // restart stopwatch
-      void start(void) noexcept;
+      inline void start(void) noexcept;
       // stop stopwatch and display elapsed time
-      void stop(void) noexcept;
+      std::chrono::high_resolution_clock::duration stop(void) noexcept;
     private:
-      // if true, elapsed time will be displayed on destruction
-      const bool display_on_destruction_;
       // units that will be displayed on stop
       Unit unit_;
       // starting and ending time
       std::chrono::high_resolution_clock::time_point start_;
   };
 }}
-// --Chronometro library: backend struct and class member definitions-------------
+// --Chronometro library: backend struct and class member definitions--------------------
 namespace Chronometro { namespace Backend {
-  Stopwatch::Stopwatch(const Unit unit, const bool display_on_destruction) noexcept
+  Stopwatch::Stopwatch(const Unit unit) noexcept
     : // member initialization list
-    display_on_destruction_(display_on_destruction),
     unit_(unit),
     start_(std::chrono::high_resolution_clock::now())
   {}
-
-  Stopwatch::~Stopwatch() noexcept
-  {
-    if (display_on_destruction_)
-      stop();
-  }
 
   void Stopwatch::start(void) noexcept
   {
@@ -97,43 +92,44 @@ namespace Chronometro { namespace Backend {
     start_ = std::chrono::high_resolution_clock::now();
   }
 
-  void Stopwatch::stop(void) noexcept
+  std::chrono::high_resolution_clock::duration Stopwatch::stop(void) noexcept
   {
     // measure duration
-    std::chrono::high_resolution_clock::duration duration = std::chrono::high_resolution_clock::now() - start_;
+    const std::chrono::high_resolution_clock::duration duration = std::chrono::high_resolution_clock::now() - start_;
 
-    // display elapsed time in unit_ units
-    std::cout << "time elapsed: ";
-
+    // execution time in nanoseconds
+    const std::chrono::nanoseconds::rep nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+    
     // if unit_ == automatic, deduce the appropriate unit
-    switch((unit_ == Unit::automatic) ? appropriate_unit(duration) : unit_) {
+    switch((unit_ == Unit::automatic) ? appropriate_unit(nanoseconds) : unit_) {
       case Unit::ns:
-        std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count() << "ns\n";
-        return;
+        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds << "ns\n";
+        break;
       case Unit::us:
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(duration).count() << "us\n";
-        return;
+        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 1000 << "us\n";
+        break;
       case Unit::ms:
-        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms\n";
-        return;
+        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 1000000 << "ms\n";
+        break;
       case Unit::s:
-        std::cout << std::chrono::duration_cast<std::chrono::seconds>(duration).count() << "s\n";
-        return;
+        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 1000000000 << "s\n";
+        break;
       case Unit::min:
-        std::cout << std::chrono::duration_cast<std::chrono::minutes>(duration).count() << "min\n";
-        return;
+        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 60000000000 << "min\n";
+        break;
       case Unit::h:
-        std::cout << std::chrono::duration_cast<std::chrono::hours>(duration).count() << "h\n";
-        return;
+        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 3600000000000 << "h\n";
+        break;
       default:
-        std::cerr << "error: chronometro: invalid unit\n";
+        std::cerr << "error: Stopwatch: invalid time unit\n";
+        break;
     }
+
+    return duration;
   }
 
-  Unit appropriate_unit(std::chrono::high_resolution_clock::duration duration)
+  Unit appropriate_unit(const std::chrono::nanoseconds::rep nanoseconds)
   {
-    std::chrono::nanoseconds::rep nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-
     // 10 h < duration
     if (nanoseconds > 36000000000000)
       return Unit::h;
@@ -158,22 +154,26 @@ namespace Chronometro { namespace Backend {
     return Unit::ns;
   }
 }}
-// --Chronometro library: frontend definitions------------------------------------
+// --Chronometro library: frontend definitions-------------------------------------------
 namespace Chronometro { inline namespace Frontend {
   template <typename F, typename... A>
-  void execution_time(const F function, const size_t repetitions, const A... arguments)
+  std::chrono::high_resolution_clock::duration execution_time(const F function, const size_t repetitions, const A... arguments)
   {
-    Stopwatch stopwatch(Unit::automatic, true);
+    Stopwatch stopwatch(Unit::automatic);
+
     for (size_t iteration = 0; iteration < repetitions; ++iteration)
       function(arguments...);
+    
+    return stopwatch.stop();
   }
 
   #undef  CHRONOMETRO_EXECUTION_TIME
-  #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)             \
-    {                                                                        \
-    Chronometro::Stopwatch stopwatch(Chronometro::Unit::automatic, true);    \
-    for (size_t iteration = 0; iteration < size_t(repetitions); ++iteration) \
-      function(__VA_ARGS__);                                                 \
-    }
+  #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)                     \
+    [=](void) -> std::chrono::high_resolution_clock::duration {                      \
+      Chronometro::Stopwatch stopwatch(Chronometro::Unit::automatic);                \
+      for (size_t _iteration_ = 0; _iteration_ < size_t(repetitions); ++_iteration_) \
+        function(__VA_ARGS__);                                                       \
+      return stopwatch.stop();                                                       \
+    }()
 }}
 #endif
