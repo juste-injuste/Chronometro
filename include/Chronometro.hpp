@@ -29,7 +29,15 @@
 // SOFTWARE.
 //  
 // --versions----------------------------------------------------------------------------
+//
 // version 1.0 initial release
+//
+// --description-------------------------------------------------------------------------
+//
+// Chronometro is a simple and lightweight C++11 (and newer) library that allows you to
+// measure the execution time of functions or code blocks. See the included README.MD file
+// for more information
+//
 // --inclusion guard---------------------------------------------------------------------
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
@@ -67,13 +75,21 @@ namespace Chronometro { namespace Backend {
   class Stopwatch {
     public:
       inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
-      // restart stopwatch
+      // start measuring time
       inline void start(void) noexcept;
-      // stop stopwatch and display elapsed time
+      // pause time measurement
+      void pause(void) noexcept;
+      // stop time measurement and display elapsed time
       std::chrono::high_resolution_clock::duration stop(void) noexcept;
+      // reset measured time and start measuring time
+      void restart(void);
     private:
       // units that will be displayed on stop
       Unit unit_;
+      // used to keep track stopwatch status
+      bool paused_;
+      // measured time
+      std::chrono::high_resolution_clock::duration duration_;
       // starting and ending time
       std::chrono::high_resolution_clock::time_point start_;
   };
@@ -83,49 +99,73 @@ namespace Chronometro { namespace Backend {
   Stopwatch::Stopwatch(const Unit unit) noexcept
     : // member initialization list
     unit_(unit),
+    paused_(false),
+    duration_(0),
     start_(std::chrono::high_resolution_clock::now())
   {}
 
   void Stopwatch::start(void) noexcept
   {
+    // unpause
+    paused_ = false;
     // measure current time
     start_ = std::chrono::high_resolution_clock::now();
   }
 
+  void Stopwatch::pause(void) noexcept
+  {
+    // measure elapsed time
+    const std::chrono::high_resolution_clock::duration duration = std::chrono::high_resolution_clock::now() - start_;
+    
+    // add elapsed time up to now if not paused
+    if (!paused_) {
+      duration_ += duration;
+      paused_ = true;
+    }
+    else std::cerr << "warning: Stopwatch: already paused\n";
+  }
+
   std::chrono::high_resolution_clock::duration Stopwatch::stop(void) noexcept
   {
-    // measure duration
-    const std::chrono::high_resolution_clock::duration duration = std::chrono::high_resolution_clock::now() - start_;
+    // pause time measurement
+    pause();
 
-    // execution time in nanoseconds
-    const std::chrono::nanoseconds::rep nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+    // measured time in nanoseconds
+    const std::chrono::nanoseconds::rep nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration_).count();
     
     // if unit_ == automatic, deduce the appropriate unit
     switch((unit_ == Unit::automatic) ? appropriate_unit(nanoseconds) : unit_) {
       case Unit::ns:
-        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds << "ns\n";
+        std::cout << "elapsed time: " << nanoseconds << " ns\n";
         break;
       case Unit::us:
-        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 1000 << "us\n";
+        std::cout << "elapsed time: " << nanoseconds / 1000 << " us\n";
         break;
       case Unit::ms:
-        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 1000000 << "ms\n";
+        std::cout << "elapsed time: " << nanoseconds / 1000000 << " ms\n";
         break;
       case Unit::s:
-        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 1000000000 << "s\n";
+        std::cout << "elapsed time: " << nanoseconds / 1000000000 << " s\n";
         break;
       case Unit::min:
-        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 60000000000 << "min\n";
+        std::cout << "elapsed time: " << nanoseconds / 60000000000 << " min\n";
         break;
       case Unit::h:
-        std::cout << std::fixed << std::setprecision(1) << "time elapsed: " << nanoseconds * 3600000000000 << "h\n";
+        std::cout << "elapsed time: " << nanoseconds / 3600000000000 << " h\n";
         break;
-      default:
-        std::cerr << "error: Stopwatch: invalid time unit\n";
-        break;
+      default: std::cerr << "error: Stopwatch: invalid time unit\n";
     }
 
-    return duration;
+    return duration_;
+  }
+
+  void Stopwatch::restart(void)
+  {
+    // reset measured duration
+    duration_ = std::chrono::high_resolution_clock::duration();
+    
+    // start measuring time
+    start();
   }
 
   Unit appropriate_unit(const std::chrono::nanoseconds::rep nanoseconds)
