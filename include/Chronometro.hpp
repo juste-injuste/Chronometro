@@ -82,7 +82,7 @@ namespace Chronometro { namespace Backend {
       // stop time measurement and display elapsed time
       std::chrono::high_resolution_clock::duration stop(void) noexcept;
       // reset measured time and start measuring time
-      void restart(void);
+      inline void restart(void);
     private:
       // units that will be displayed on stop
       Unit unit_;
@@ -162,7 +162,7 @@ namespace Chronometro { namespace Backend {
   void Stopwatch::restart(void)
   {
     // reset measured duration
-    duration_ = std::chrono::high_resolution_clock::duration();
+    duration_ = std::chrono::high_resolution_clock::duration(0);
     
     // start measuring time
     start();
