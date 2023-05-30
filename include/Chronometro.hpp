@@ -209,7 +209,7 @@ namespace Chronometro { inline namespace Frontend {
 
   #undef  CHRONOMETRO_EXECUTION_TIME
   #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)                     \
-    [=](void) -> std::chrono::high_resolution_clock::duration {                      \
+    [&](void) -> std::chrono::high_resolution_clock::duration {                      \
       Chronometro::Stopwatch stopwatch(Chronometro::Unit::automatic);                \
       for (size_t _iteration_ = 0; _iteration_ < size_t(repetitions); ++_iteration_) \
         function(__VA_ARGS__);                                                       \
