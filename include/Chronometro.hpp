@@ -30,7 +30,7 @@
 //  
 // --versions----------------------------------------------------------------------------
 //
-// version 1.0 initial release
+// version 1.0.0 initial release
 //
 // --description-------------------------------------------------------------------------
 //
@@ -45,9 +45,11 @@
 #include <chrono>
 #include <iostream>
 #include <iomanip>
-// --Chronometro library: backend forward declaration------------------------------------
+#include <cstdint>
+// --Chronometro library : backend forward declaration-----------------------------------
 namespace Chronometro { namespace Backend {
   // measure elapsed time
+  template<typename C = std::chrono::high_resolution_clock>
   class Stopwatch;
 
   // time units for displaying
@@ -58,20 +60,37 @@ namespace Chronometro { namespace Backend {
   // returns the appropriate unit to display time
   Unit appropriate_unit(const std::chrono::nanoseconds::rep nanoseconds);
 }}
-// --Chronometro library: frontend forward declarations----------------------------------
+// --Chronometro library : frontend forward declarations---------------------------------
 namespace Chronometro { inline namespace Frontend {
+  // library version
+  enum class Version {
+    major = 1,
+    minor = 0,
+    patch = 0
+  };
+
+  // display version
+  inline std::ostream& operator<<(std::ostream& ostream, Version);
+
+  // bring default clocks to frontend
+  using std::chrono::system_clock;
+  using std::chrono::steady_clock;
+  using std::chrono::high_resolution_clock;
+
+  // bring functionality to frontend
   using Backend::Unit;
   using Backend::Stopwatch;
 
   // measure function execution time
-  template <typename F, typename... A>
-  std::chrono::high_resolution_clock::duration execution_time(const F function, const size_t repetitions, const A... arguments);
+  template<typename C = std::chrono::high_resolution_clock, typename F, typename... A>
+  typename C::duration execution_time(const F function, const size_t repetitions, const A... arguments);
 
   // measure function execution time
   #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
 }}
-// --Chronometro library: backend struct and class definitions---------------------------
+// --Chronometro library : backend struct and class definitions--------------------------
 namespace Chronometro { namespace Backend {
+  template<typename C>
   class Stopwatch {
     public:
       inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
@@ -80,7 +99,7 @@ namespace Chronometro { namespace Backend {
       // pause time measurement
       void pause(void) noexcept;
       // stop time measurement and display elapsed time
-      std::chrono::high_resolution_clock::duration stop(void) noexcept;
+      typename C::duration stop(void) noexcept;
       // reset measured time and start measuring time
       inline void restart(void);
     private:
@@ -89,33 +108,36 @@ namespace Chronometro { namespace Backend {
       // used to keep track stopwatch status
       bool paused_;
       // measured time
-      std::chrono::high_resolution_clock::duration duration_;
+      typename C::duration duration_;
       // starting and ending time
-      std::chrono::high_resolution_clock::time_point start_;
+      typename C::time_point start_;
   };
 }}
-// --Chronometro library: backend struct and class member definitions--------------------
+// --Chronometro library : backend struct and class member definitions-------------------
 namespace Chronometro { namespace Backend {
-  Stopwatch::Stopwatch(const Unit unit) noexcept
+  template<typename C>
+  Stopwatch<C>::Stopwatch(const Unit unit) noexcept
     : // member initialization list
     unit_(unit),
     paused_(false),
     duration_(0),
-    start_(std::chrono::high_resolution_clock::now())
+    start_(C::now())
   {}
 
-  void Stopwatch::start(void) noexcept
+  template<typename C>
+  void Stopwatch<C>::start(void) noexcept
   {
     // unpause
     paused_ = false;
     // measure current time
-    start_ = std::chrono::high_resolution_clock::now();
+    start_ = C::now();
   }
 
-  void Stopwatch::pause(void) noexcept
+  template<typename C>
+  void Stopwatch<C>::pause(void) noexcept
   {
     // measure elapsed time
-    const std::chrono::high_resolution_clock::duration duration = std::chrono::high_resolution_clock::now() - start_;
+    const typename C::duration duration = C::now() - start_;
     
     // add elapsed time up to now if not paused
     if (!paused_) {
@@ -125,13 +147,14 @@ namespace Chronometro { namespace Backend {
     else std::cerr << "warning: Stopwatch: already paused\n";
   }
 
-  std::chrono::high_resolution_clock::duration Stopwatch::stop(void) noexcept
+  template<typename C>
+  typename C::duration Stopwatch<C>::stop(void) noexcept
   {
     // pause time measurement
     pause();
 
     // measured time in nanoseconds
-    const std::chrono::nanoseconds::rep nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration_).count();
+    const std::chrono::nanoseconds::rep nanoseconds = std::chrono::nanoseconds(duration_).count();
     
     // if unit_ == automatic, deduce the appropriate unit
     switch((unit_ == Unit::automatic) ? appropriate_unit(nanoseconds) : unit_) {
@@ -159,10 +182,11 @@ namespace Chronometro { namespace Backend {
     return duration_;
   }
 
-  void Stopwatch::restart(void)
+  template<typename C>
+  void Stopwatch<C>::restart(void)
   {
     // reset measured duration
-    duration_ = std::chrono::high_resolution_clock::duration(0);
+    duration_ = C::duration(0);
     
     // start measuring time
     start();
@@ -194,12 +218,17 @@ namespace Chronometro { namespace Backend {
     return Unit::ns;
   }
 }}
-// --Chronometro library: frontend definitions-------------------------------------------
+// --Chronometro library : frontend definitions------------------------------------------
 namespace Chronometro { inline namespace Frontend {
-  template <typename F, typename... A>
-  std::chrono::high_resolution_clock::duration execution_time(const F function, const size_t repetitions, const A... arguments)
+  std::ostream& operator<<(std::ostream& ostream, Version version)
   {
-    Stopwatch stopwatch(Unit::automatic);
+    return ostream << "Chronometro version : " << Version::major << '.' << Version::minor << '.' << Version::patch;
+  }
+
+  template<typename C, typename F, typename... A>
+  typename C::duration execution_time(const F function, const size_t repetitions, const A... arguments)
+  {
+    Stopwatch<C> stopwatch(Unit::automatic);
 
     for (size_t iteration = 0; iteration < repetitions; ++iteration)
       function(arguments...);
@@ -208,12 +237,12 @@ namespace Chronometro { inline namespace Frontend {
   }
 
   #undef  CHRONOMETRO_EXECUTION_TIME
-  #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)                     \
-    [&](void) -> std::chrono::high_resolution_clock::duration {                      \
-      Chronometro::Stopwatch stopwatch(Chronometro::Unit::automatic);                \
-      for (size_t _iteration_ = 0; _iteration_ < size_t(repetitions); ++_iteration_) \
-        function(__VA_ARGS__);                                                       \
-      return stopwatch.stop();                                                       \
+  #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)               \
+    [&](void) {                                                                \
+      Chronometro::Stopwatch<> stopwatch(Chronometro::Unit::automatic);        \
+      for (size_t iteration = 0; iteration < size_t(repetitions); ++iteration) \
+        function(__VA_ARGS__);                                                 \
+      return stopwatch.stop();                                                 \
     }()
 }}
 #endif
