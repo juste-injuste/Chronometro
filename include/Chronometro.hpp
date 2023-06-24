@@ -1,53 +1,52 @@
-// --author------------------------------------------------------------------------------
-// 
-// Justin Asselin (juste-injuste)
-// justin.asselin@usherbrooke.ca
-// https://github.com/juste-injuste/Chronometro
-// 
-// --liscence----------------------------------------------------------------------------
-// 
-// MIT License
-// 
-// Copyright (c) 2023 Justin Asselin (juste-injuste)
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-//  
-// --versions----------------------------------------------------------------------------
-//
-// 1.0.0 - initial release
-//
-// --description-------------------------------------------------------------------------
-//
-// Chronometro is a simple and lightweight C++11 (and newer) library that allows you to
-// measure the execution time of functions or code blocks. See the included README.MD file
-// for more information
-//
-// --inclusion guard---------------------------------------------------------------------
+/*---author----------------------------------------------------------------------------------------
+
+Justin Asselin (juste-injuste)
+justin.asselin@usherbrooke.ca
+https://github.com/juste-injuste/Chronometro
+
+-----liscence--------------------------------------------------------------------------------------
+ 
+MIT License
+
+Copyright (c) 2023 Justin Asselin (juste-injuste)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+ 
+-----versions--------------------------------------------------------------------------------------
+
+version 1.0 initial release
+
+-----description-----------------------------------------------------------------------------------
+
+Chronometro is a simple and lightweight C++11 (and newer) library that allows you to measure the
+execution time of functions or code blocks. See the included README.MD file for more information.
+
+-----inclusion guard-----------------------------------------------------------------------------*/
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
-// --necessary standard libraries--------------------------------------------------------
+// --necessary standard libraries------------------------------------------------------------------
 #include <chrono>
 #include <iostream>
 #include <iomanip>
 #include <cstdint>
 #include <iosfwd>
-// --Chronometro library-----------------------------------------------------------------
+// --Chronometro library---------------------------------------------------------------------------
 namespace Chronometro
 {
   // library version
@@ -55,7 +54,7 @@ namespace Chronometro
   #define CHRONOMETRO_VERSION_MAJOR 1
   #define CHRONOMETRO_VERSION_MINOR 0
   #define CHRONOMETRO_VERSION_PATCH 0
-// --Chronometro library : frontend forward declarations---------------------------------
+// --Chronometro library : frontend forward declarations-------------------------------------------
   inline namespace Frontend
   {
     // bring clocks to frontend
@@ -84,12 +83,14 @@ namespace Chronometro
     // measure function execution time without function calling via pointers
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
 
-    // output streams
-    std::ostream OUT(std::cout.rdbuf());
-    std::ostream WRN(std::cerr.rdbuf());
-    std::ostream ERR(std::cerr.rdbuf());
+    // output stream
+    std::ostream out(std::cout.rdbuf());
+    // error stream
+    std::ostream err(std::cerr.rdbuf());
+    // warning stream
+    std::ostream wrn(std::cerr.rdbuf());
   }
-// --Chronometro library : frontend struct and class definitions-------------------------
+// --Chronometro library : frontend struct and class definitions-----------------------------------
   inline namespace Frontend
   {
     template<typename C>
@@ -115,13 +116,13 @@ namespace Chronometro
         typename C::time_point start_;
     };
   }
-// --Chronometro library : backend forward declaration-----------------------------------
+// --Chronometro library : backend forward declaration---------------------------------------------
   namespace Backend
   {
     // returns the appropriate unit to display time
     Unit appropriate_unit(const std::chrono::nanoseconds::rep nanoseconds);
   }
-// --Chronometro library : frontend struct and class member definitions------------------
+// --Chronometro library : frontend struct and class member definitions----------------------------
   inline namespace Frontend
   {
     template<typename C>
@@ -148,13 +149,13 @@ namespace Chronometro
     {
       // measure elapsed time
       const typename C::duration duration = C::now() - start_;
-      
+
       // add elapsed time up to now if not paused
       if (!paused_) {
         duration_ += duration;
         paused_ = true;
       }
-      else WRN << "warning: Stopwatch: already paused\n";
+      else wrn << "warning: Stopwatch: already paused\n";
 
       return duration_;
     }
@@ -167,28 +168,28 @@ namespace Chronometro
 
       // measured time in nanoseconds
       const std::chrono::nanoseconds::rep nanoseconds = std::chrono::nanoseconds(duration_).count();
-      
+
       // if unit_ == automatic, deduce the appropriate unit
       switch((unit_ == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit_) {
         case Unit::ns:
-          OUT << "elapsed time: " << nanoseconds << " ns\n";
+          out << "elapsed time: " << nanoseconds << " ns\n";
           break;
         case Unit::us:
-          OUT << "elapsed time: " << nanoseconds / 1000 << " us\n";
+          out << "elapsed time: " << nanoseconds / 1000 << " us\n";
           break;
         case Unit::ms:
-          OUT << "elapsed time: " << nanoseconds / 1000000 << " ms\n";
+          out << "elapsed time: " << nanoseconds / 1000000 << " ms\n";
           break;
         case Unit::s:
-          OUT << "elapsed time: " << nanoseconds / 1000000000 << " s\n";
+          out << "elapsed time: " << nanoseconds / 1000000000 << " s\n";
           break;
         case Unit::min:
-          OUT << "elapsed time: " << nanoseconds / 60000000000 << " min\n";
+          out << "elapsed time: " << nanoseconds / 60000000000 << " min\n";
           break;
         case Unit::h:
-          OUT << "elapsed time: " << nanoseconds / 3600000000000 << " h\n";
+          out << "elapsed time: " << nanoseconds / 3600000000000 << " h\n";
           break;
-        default: ERR << "error: Stopwatch: invalid time unit\n";
+        default: err << "error: Stopwatch: invalid time unit\n";
       }
 
       return duration_;
@@ -199,12 +200,12 @@ namespace Chronometro
     {
       // reset measured duration
       duration_ = typename C::duration(0);
-      
+
       // start measuring time
       start();
     }
   }
-// --Chronometro library : frontend definitions------------------------------------------
+// --Chronometro library : frontend definitions----------------------------------------------------
   inline namespace Frontend
   {
     template<typename C, typename F, typename... A>
@@ -214,7 +215,7 @@ namespace Chronometro
 
       for (size_t iteration = 0; iteration < repetitions; ++iteration)
         function(arguments...);
-      
+
       return stopwatch.stop();
     }
 
@@ -227,7 +228,7 @@ namespace Chronometro
         return _stopwatch_.stop();                                                     \
       }()
   }
-// --Chronometro library : backend definitions-------------------------------------------
+// --Chronometro library : backend definitions-----------------------------------------------------
   namespace Backend
   {
     Unit appropriate_unit(const std::chrono::nanoseconds::rep nanoseconds)
@@ -251,7 +252,7 @@ namespace Chronometro
       // 10 us < duration <= 10 ms
       if (nanoseconds > 10000)
         return Unit::us;
-        
+
       // duration <= 10 us
       return Unit::ns;
     }
