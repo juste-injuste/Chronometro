@@ -5,6 +5,8 @@
 
 Chronometro is a simple and lightweight C++11 (and newer) library that allows you to measure the execution time of functions or code blocks.
 
+---
+
 ## Usage
 
 Chronometro offers three ways to measure elapsed time:
@@ -43,11 +45,11 @@ The constructor takes this optional parameter:
 
 The class has these methods:
 * `start()` starts measuring time.
-* `pause()` stops time measurement until the next `start()` or `restart()`.
+* `pause()` stops time measurement until the next `start()` or `restart()`, and returns the elapsed time as the `C::duration` type.
 * `stop()` stops time measurement, displays measured time and returns the elapsed time as the `C::duration` type.
 * `restart()` resets the measured time and starts measuring time.
 
-Here is how `Stopwatch` may be used:
+Here is how `Stopwatch` may be used :
 ```cpp
 #include <Chronometro.hpp>
 extern void sleep_for_ms(int);
@@ -85,7 +87,7 @@ The execution_time function allows to measure the time it takes to execute a fun
 
 The template typename C represents the clock be used to measure time. The default is `std::chrono::high_resolution_clock`.
 
-The function takes these arguments:
+The function takes these arguments :
 * `function` is the function whose execution time will be measured
 * `repetitions` is the amount of function execution repetitions
 * `arguments` is optional, it is used to pass arguments to the function
@@ -118,7 +120,7 @@ The macro takes these arguments:
 * `repetitions` is the amount of function execution repetitions
 * `...` is optional, it is used to pass arguments to the function
 
-Here is how `CHRONOMETRO_EXECUTION_TIME` may be used:
+Here is how `CHRONOMETRO_EXECUTION_TIME` may be used :
 ```cpp
 #include <Chronometro.hpp>
 extern void sleep_for_ms(int);
@@ -135,39 +137,59 @@ _Limitation_ : The CHRONOMETRO_EXECUTION_TIME does not allow to specify a clock;
 
 ---
 
-## Installation
+## Streams
 
-Chronometro is a header-only library. To use it in your C++ project, simply `#include` the [Chronometro.hpp](include/Chronometro.hpp) header file.
+Chronometro defines these following `std::ostream`s, which may be [redirected](https://github.com/juste-injuste/Katagrafeas) if need be :
+* `out_stream` elapsed times go through here (linked to `std::cout` by default).
+* `err_stream` errors go through here (linked to `std::cerr` by default).
+* `wrn_stream` warnings go through here (linked to `std::cerr` by default).
 
-## Disclosure
-
-Chronometro relies entirely on the accuracy of the clock that is used. The default clock is `std::chrono::high_resolution_clock`.
-
-## Details
-
-Chronometro brings into scope `std::chrono::steady_clock` and `std::chrono::high_resolution_clock` to facilitate using clocks other than the default clock.
-
-Chronometro also defines these following 
+---
 
 ## Version
 
-The current version defines the following macros:
+Chronometro defines the following macros (which correspond to the current version) :
 ```cpp
 #define CHRONOMETRO_VERSION       001000000L
 #define CHRONOMETRO_VERSION_MAJOR 1
 #define CHRONOMETRO_VERSION_MINOR 0
 #define CHRONOMETRO_VERSION_PATCH 0
 ```
-### History
 
-Version 1.0: initial release
+---
+
+## Details
+
+Chronometro brings into scope `std::chrono::steady_clock` and `std::chrono::high_resolution_clock` to simplify scope resolution.
+
+---
+
+## Disclosure
+
+Chronometro relies entirely on the accuracy of the clock that is used. The default clock is `std::chrono::high_resolution_clock`.
+
+---
+
+## History
+
+Version 1.0.0 : Initial release
+
+---
+
+## Installation
+
+Chronometro is a header-only library. To use it in your C++ project, simply `#include` the [Chronometro.hpp](include/Chronometro.hpp) header file.
+
+---
 
 ## License
 
 Chronometro is released under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
+---
+
 ## Author
 
 Justin Asselin (juste-injuste)  
-email: justin.asselin@usherbrooke.ca  
-GitHub: [juste-injuste](https://github.com/juste-injuste)
+Email : justin.asselin@usherbrooke.ca  
+GitHub : [juste-injuste](https://github.com/juste-injuste)

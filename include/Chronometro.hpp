@@ -30,7 +30,7 @@ SOFTWARE.
  
 -----versions--------------------------------------------------------------------------------------
 
-version 1.0 initial release
+Version 1.0.0 Initial release
 
 -----description-----------------------------------------------------------------------------------
 
@@ -49,14 +49,15 @@ execution time of functions or code blocks. See the included README.MD file for 
 // --Chronometro library---------------------------------------------------------------------------
 namespace Chronometro
 {
-  // library version
-  #define CHRONOMETRO_VERSION       001000000L
-  #define CHRONOMETRO_VERSION_MAJOR 1
-  #define CHRONOMETRO_VERSION_MINOR 0
-  #define CHRONOMETRO_VERSION_PATCH 0
 // --Chronometro library : frontend forward declarations-------------------------------------------
   inline namespace Frontend
   {
+    // library version
+    #define CHRONOMETRO_VERSION       001000000L
+    #define CHRONOMETRO_VERSION_MAJOR 1
+    #define CHRONOMETRO_VERSION_MINOR 0
+    #define CHRONOMETRO_VERSION_PATCH 0
+    
     // bring clocks to frontend
     using std::chrono::steady_clock;
     using std::chrono::high_resolution_clock;
@@ -84,11 +85,11 @@ namespace Chronometro
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
 
     // output stream
-    std::ostream out(std::cout.rdbuf());
+    std::ostream out_stream(std::cout.rdbuf());
     // error stream
-    std::ostream err(std::cerr.rdbuf());
+    std::ostream err_stream(std::cerr.rdbuf());
     // warning stream
-    std::ostream wrn(std::cerr.rdbuf());
+    std::ostream wrn_stream(std::cerr.rdbuf());
   }
 // --Chronometro library : frontend struct and class definitions-----------------------------------
   inline namespace Frontend
@@ -155,7 +156,7 @@ namespace Chronometro
         duration_ += duration;
         paused_ = true;
       }
-      else wrn << "warning: Stopwatch: already paused\n";
+      else wrn_stream << "warning: Stopwatch: already paused\n";
 
       return duration_;
     }
@@ -172,24 +173,24 @@ namespace Chronometro
       // if unit_ == automatic, deduce the appropriate unit
       switch((unit_ == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit_) {
         case Unit::ns:
-          out << "elapsed time: " << nanoseconds << " ns\n";
+          out_stream << "elapsed time: " << nanoseconds << " ns\n";
           break;
         case Unit::us:
-          out << "elapsed time: " << nanoseconds / 1000 << " us\n";
+          out_stream << "elapsed time: " << nanoseconds / 1000 << " us\n";
           break;
         case Unit::ms:
-          out << "elapsed time: " << nanoseconds / 1000000 << " ms\n";
+          out_stream << "elapsed time: " << nanoseconds / 1000000 << " ms\n";
           break;
         case Unit::s:
-          out << "elapsed time: " << nanoseconds / 1000000000 << " s\n";
+          out_stream << "elapsed time: " << nanoseconds / 1000000000 << " s\n";
           break;
         case Unit::min:
-          out << "elapsed time: " << nanoseconds / 60000000000 << " min\n";
+          out_stream << "elapsed time: " << nanoseconds / 60000000000 << " min\n";
           break;
         case Unit::h:
-          out << "elapsed time: " << nanoseconds / 3600000000000 << " h\n";
+          out_stream << "elapsed time: " << nanoseconds / 3600000000000 << " h\n";
           break;
-        default: err << "error: Stopwatch: invalid time unit\n";
+        default: err_stream << "error: Stopwatch: invalid time unit\n";
       }
 
       return duration_;
