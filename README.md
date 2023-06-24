@@ -14,7 +14,7 @@ Chronometro offers three ways to measure elapsed time:
 * [execution_time](#execution_time) function
 * [CHRONOMETRO_EXECUTION_TIME](#CHRONOMETRO_EXECUTION_TIME) macro
 
-Chronometro introduces the [Unit](#Unit) enum class type.
+Chronometro also introduces the [Unit](#Unit) enum class type.
 
 ---
 
@@ -27,7 +27,13 @@ The `Unit` enum class type is used to chose the displayed time unit.
 * `Unit::s` (seconds)
 * `Unit::min` (minutes)
 * `Unit::h` (hours)
-* `Unit::automatic` deduces the appropriate time unit.
+* `Unit::automatic` deduces the appropriate unit using the following:
+  - If elapsed time is greater than 10 hours, use `Unit::h`
+  - If elapsed time is greater than 10 minutes, use `Unit::min`
+  - If elapsed time is greater than 10 seconds, use `Unit::s`
+  - If elapsed time is greater than 10 milliseconds, use `Unit::ms`
+  - If elapsed time is greater than 10 microseconds, use `Unit::us`
+  - Otherwise, use `Unit::ns`
 
 ---
 
@@ -36,29 +42,30 @@ The `Unit` enum class type is used to chose the displayed time unit.
 ```
 Stopwatch<C = high_resolution_clock>(unit = automatic)
 ```
-The Stopwatch class allows to measure the time it takes to execute code blocks. A stopwatch object may be started, paused stopped or restarted. When a stopwatch object is stopped, it displays the measured elasped time. A stopwatch object starts measuring time upon creation.
+The Stopwatch class allows to measure the time it takes to execute code blocks. A stopwatch object may be started, paused stopped, restarted or have its time unit set. When a stopwatch object is stopped, it displays the elapsed time. Pausing or stopping a stopwatch returns the elapsed time as the `C::duration` type. A stopwatch object starts measuring time upon creation.
 
 The template typename C represents the clock used to measure time. The default is `std::chrono::high_resolution_clock`.
 
 The constructor takes this optional parameter:
-* `unit` specifies the unit used when displaying elapsed time. The default is `Unit::automatic`.
+* `unit` sets the unit used when displaying elapsed time. The default is `Unit::automatic`.
 
 The class has these methods:
 * `start()` starts measuring time.
 * `pause()` stops time measurement until the next `start()` or `restart()`, and returns the elapsed time as the `C::duration` type.
-* `stop()` stops time measurement, displays measured time and returns the elapsed time as the `C::duration` type.
-* `restart()` resets the measured time and starts measuring time.
+* `stop()` stops time measurement, displays elapsed time and returns it as the `C::duration` type.
+* `restart()` resets and starts measuring elapsed time.
+* `set(unit)` sets the unit used when displaying the elapsed time.
 
-Here is how `Stopwatch` may be used :
+Here is how `Stopwatch` may be used:
 ```cpp
-#include <Chronometro.hpp>
+#include "Chronometro.hpp"
 extern void sleep_for_ms(int);
 
 int main()
 {
   using namespace Chronometro;
 
-  Stopwatch<> stopwatch(Unit::ms);
+  Stopwatch<> stopwatch{Unit::ms};
   sleep_for_ms(30);
 
   stopwatch.pause();
@@ -76,6 +83,10 @@ int main()
 }
 ```
 
+`stop()` will issue a the following error if the set unit is not valid: `"error: Stopwatch: invalid time unit\n"`
+
+`stop()` and `pause()` will issue a the following warning if the stopwatch was already paused: `"warning: Stopwatch: already paused\n"`
+
 ---
 
 ### execution_time
@@ -83,18 +94,18 @@ int main()
 ```
 execution_time<C = high_resolution_clock>(function, repetitions, ...arguments)
 ```
-The execution_time function allows to measure the time it takes to execute a function for a specified number of repetitions. After the repetitions are done, the elapsed time is displayed using the `Unit::automatic` time unit and the elapsed time is returned as the `C::duration` type.
+The execution_time function allows to measure the time it takes to execute a function for a specified number of repetitions. After the repetitions are done, the elapsed time is displayed using the `Unit::automatic` time unit and is returned as the `C::duration` type.
 
 The template typename C represents the clock be used to measure time. The default is `std::chrono::high_resolution_clock`.
 
-The function takes these arguments :
+The function takes these arguments:
 * `function` is the function whose execution time will be measured
 * `repetitions` is the amount of function execution repetitions
 * `arguments` is optional, it is used to pass arguments to the function
 
 Here is how `execution_time` may be used:
 ```cpp
-#include <Chronometro.hpp>
+#include "Chronometro.hpp"
 extern void sleep_for_ms(int);
 
 int main()
@@ -113,16 +124,16 @@ int main()
 ```
 CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
 ```
-The CHRONOMETRO_EXECUTION_TIME macro functions like the [execution_time](#execution_time) function, difference being that it is a text-replacement macro, meaning the function is not called function pointer indirection, which may be desireable. After the repetitions are done, the elapsed time is displayed using the `Unit::automatic` time unit and the elapsed time is returned as the `std::chrono::high_resolution_clock::duration` type.
+The CHRONOMETRO_EXECUTION_TIME macro functions like the [execution_time](#execution_time) function, difference being that it is a text-replacement macro, meaning the function is not called function pointer indirection, which may be desireable. After the repetitions are done, the elapsed time is displayed using the `Unit::automatic` time unit and is returned as the `std::chrono::high_resolution_clock::duration` type.
 
 The macro takes these arguments:
 * `function` is the function whose execution time will be measured
 * `repetitions` is the amount of function execution repetitions
 * `...` is optional, it is used to pass arguments to the function
 
-Here is how `CHRONOMETRO_EXECUTION_TIME` may be used :
+Here is how `CHRONOMETRO_EXECUTION_TIME` may be used:
 ```cpp
-#include <Chronometro.hpp>
+#include "Chronometro.hpp"
 extern void sleep_for_ms(int);
 
 int main()
@@ -131,15 +142,15 @@ int main()
 }
 ```
 
-_Limitation_ : You may not use the CHRONOMETRO_EXECUTION_TIME macro with variables named `_iteration_` or `_stopwatch_`; otherwise there will be name collision.
+_Limitation_: You may not use the CHRONOMETRO_EXECUTION_TIME macro with variables named `_iteration_` or `_stopwatch_`; otherwise there will be name collision and undefined behavior.
 
-_Limitation_ : The CHRONOMETRO_EXECUTION_TIME does not allow to specify a clock; `std::chrono::high_resolution_clock` is used.
+_Limitation_: The CHRONOMETRO_EXECUTION_TIME does not allow to specify a clock; `std::chrono::high_resolution_clock` is used.
 
 ---
 
 ## Streams
 
-Chronometro defines these following `std::ostream`s, which may be [redirected](https://github.com/juste-injuste/Katagrafeas) if need be :
+Chronometro defines these following `std::ostream`s, which may be [redirected](https://github.com/juste-injuste/Katagrafeas):
 * `out_stream` elapsed times go through here (linked to `std::cout` by default).
 * `err_stream` errors go through here (linked to `std::cerr` by default).
 * `wrn_stream` warnings go through here (linked to `std::cerr` by default).
@@ -148,7 +159,7 @@ Chronometro defines these following `std::ostream`s, which may be [redirected](h
 
 ## Version
 
-Chronometro defines the following macros (which correspond to the current version) :
+Chronometro defines the following macros (which correspond to the current version):
 ```cpp
 #define CHRONOMETRO_VERSION       001000000L
 #define CHRONOMETRO_VERSION_MAJOR 1
@@ -172,7 +183,7 @@ Chronometro relies entirely on the accuracy of the clock that is used. The defau
 
 ## History
 
-Version 1.0.0 : Initial release
+Version 1.0.0 - Initial release
 
 ---
 
@@ -191,5 +202,5 @@ Chronometro is released under the MIT License. See the [LICENSE](LICENSE) file f
 ## Author
 
 Justin Asselin (juste-injuste)  
-Email : justin.asselin@usherbrooke.ca  
-GitHub : [juste-injuste](https://github.com/juste-injuste)
+Email: justin.asselin@usherbrooke.ca  
+GitHub: [juste-injuste](https://github.com/juste-injuste)

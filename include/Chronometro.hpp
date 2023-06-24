@@ -30,7 +30,7 @@ SOFTWARE.
  
 -----versions--------------------------------------------------------------------------------------
 
-Version 1.0.0 Initial release
+Version 1.0.0 - Initial release
 
 -----description-----------------------------------------------------------------------------------
 
@@ -41,11 +41,10 @@ execution time of functions or code blocks. See the included README.MD file for 
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
 // --necessary standard libraries------------------------------------------------------------------
-#include <chrono>
-#include <iostream>
-#include <iomanip>
-#include <cstdint>
-#include <iosfwd>
+#include <chrono>   // clocks and time representations
+#include <iostream> // std::cout, std::cerr
+#include <cstdint>  // size_t
+#include <ostream>  // std::ostream
 // --Chronometro library---------------------------------------------------------------------------
 namespace Chronometro
 {
@@ -106,6 +105,8 @@ namespace Chronometro
         typename C::duration stop(void) noexcept;
         // reset measured time and start measuring time
         inline void restart(void) noexcept;
+        // set unit
+        inline void set(const Unit unit) noexcept;
       private:
         // units that will be displayed on stop
         Unit unit_;
@@ -123,7 +124,7 @@ namespace Chronometro
     // returns the appropriate unit to display time
     Unit appropriate_unit(const std::chrono::nanoseconds::rep nanoseconds);
   }
-// --Chronometro library : frontend struct and class member definitions----------------------------
+// --Chronometro library : frontend definitions----------------------------------------------------
   inline namespace Frontend
   {
     template<typename C>
@@ -205,10 +206,13 @@ namespace Chronometro
       // start measuring time
       start();
     }
-  }
-// --Chronometro library : frontend definitions----------------------------------------------------
-  inline namespace Frontend
-  {
+
+    template<typename C>
+    void Stopwatch<C>:: set(const Unit unit) noexcept
+    {
+      unit_ = unit;
+    }
+
     template<typename C, typename F, typename... A>
     typename C::duration execution_time(const F function, const size_t repetitions, const A... arguments)
     {
@@ -223,7 +227,7 @@ namespace Chronometro
     #undef  CHRONOMETRO_EXECUTION_TIME
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)                     \
       [&](void) {                                                                      \
-        Chronometro::Stopwatch<> _stopwatch_(Chronometro::Unit::automatic);            \
+        Chronometro::Stopwatch<> _stopwatch_;                                          \
         for (size_t _iteration_ = 0; _iteration_ < size_t(repetitions); ++_iteration_) \
           function(__VA_ARGS__);                                                       \
         return _stopwatch_.stop();                                                     \
