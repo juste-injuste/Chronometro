@@ -58,6 +58,7 @@ namespace Chronometro
     #define CHRONOMETRO_VERSION_PATCH 0
     
     // bring clocks to frontend
+    using std::chrono::system_clock;
     using std::chrono::steady_clock;
     using std::chrono::high_resolution_clock;
 
@@ -98,7 +99,7 @@ namespace Chronometro
       public:
         inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
         // start measuring time
-        inline void start(void) noexcept;
+        void start(void) noexcept;
         // pause time measurement
         typename C::duration pause(void) noexcept;
         // stop time measurement and display elapsed time
@@ -108,14 +109,14 @@ namespace Chronometro
         // set unit
         inline void set(const Unit unit) noexcept;
       private:
-        // units that will be displayed on stop
+        // unit to be used when displaying elapsed time
         Unit unit_;
         // used to keep track stopwatch status
         bool paused_;
-        // measured time
-        typename C::duration duration_;
-        // starting and ending time
+        // time either at construction or from last start/restart 
         typename C::time_point start_;
+        // measured elapsed time
+        typename C::duration duration_;
     };
   }
 // --Chronometro library : backend forward declaration---------------------------------------------
@@ -132,18 +133,21 @@ namespace Chronometro
       : // member initialization list
       unit_(unit),
       paused_(false),
-      duration_(0),
-      start_(C::now())
+      start_(C::now()),
+      duration_(0)
     {}
 
     template<typename C>
     void Stopwatch<C>::start(void) noexcept
     {
-      // unpause
-      paused_ = false;
+      if (paused_) {
+        // unpause
+        paused_ = false;
 
-      // measure current time
-      start_ = C::now();
+        // measure current time
+        start_ = C::now();
+      }
+      else wrn_stream << "warning: Stopwatch: already started\n";
     }
 
     template<typename C>
@@ -153,11 +157,12 @@ namespace Chronometro
       const typename C::duration duration = C::now() - start_;
 
       // add elapsed time up to now if not paused
-      if (!paused_) {
+      if (paused_)
+        wrn_stream << "warning: Stopwatch: already paused\n";
+      else {
         duration_ += duration;
         paused_ = true;
       }
-      else wrn_stream << "warning: Stopwatch: already paused\n";
 
       return duration_;
     }
@@ -203,14 +208,22 @@ namespace Chronometro
       // reset measured duration
       duration_ = typename C::duration(0);
 
-      // start measuring time
-      start();
+      // unpause
+      paused_ = false;
+
+      // measure current time
+      start_ = C::now();
     }
 
     template<typename C>
     void Stopwatch<C>:: set(const Unit unit) noexcept
     {
-      unit_ = unit;
+      // validate unit
+      if (unit > Unit::automatic) {
+        wrn_stream << "warning: Stopwatch: invalid unit, automatic used instead\n";
+        unit_ = Unit::automatic;
+      }
+      else unit_ = unit;
     }
 
     template<typename C, typename F, typename... A>
