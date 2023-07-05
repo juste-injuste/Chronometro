@@ -30,7 +30,7 @@ void stopwatch_tests()
   stopwatch_2.stop();  // prints "elapsed time: 35000000 ns"
   stopwatch_2.pause(); // warning issued
   stopwatch_2.stop();  // warning issued, prints "elapsed time: 35000000 ns"
-  stopwatch_2.set(Unit(97)); // invalid, sets unit to automatic
+  stopwatch_2.set(Unit(97)); // warning issued, sets unit to automatic
   stopwatch_2.stop();  // warning issued, prints "elapsed time: 35 ms"
   stopwatch_2.start();
   sleep_for_ms(100);
@@ -68,15 +68,15 @@ int main()
   std::ofstream file_3("function_tests.txt");
   std::ofstream file_4("macro_tests.txt");
 
-  Chronometro::out_stream.rdbuf(file_1.rdbuf()); // redirect output
-  Chronometro::wrn_stream.rdbuf(file_2.rdbuf()); // redirect warnings
+  Chronometro::Stopwatch<>::Internals::out_ostream.rdbuf(file_1.rdbuf()); // redirect output
+  Chronometro::Stopwatch<>::Internals::wrn_ostream.rdbuf(file_2.rdbuf()); // redirect warnings
   stopwatch_tests();
 
-  Chronometro::out_stream.rdbuf(file_3.rdbuf()); // redirect output
-  Chronometro::wrn_stream.rdbuf(file_3.rdbuf()); // redirect warnings
+  Chronometro::Stopwatch<>::Internals::out_ostream.rdbuf(file_3.rdbuf()); // redirect output
+  Chronometro::Stopwatch<>::Internals::wrn_ostream.rdbuf(file_3.rdbuf()); // redirect warnings
   function_tests();
 
-  Chronometro::out_stream.rdbuf(file_4.rdbuf()); // redirect output
-  Chronometro::wrn_stream.rdbuf(file_4.rdbuf()); // redirect warnings
+  Chronometro::Stopwatch<>::Internals::out_ostream.rdbuf(file_4.rdbuf()); // redirect output
+  Chronometro::Stopwatch<>::Internals::wrn_ostream.rdbuf(file_4.rdbuf()); // redirect warnings
   macro_tests();
 }

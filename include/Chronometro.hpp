@@ -4,7 +4,7 @@ Justin Asselin (juste-injuste)
 justin.asselin@usherbrooke.ca
 https://github.com/juste-injuste/Chronometro
 
------liscence--------------------------------------------------------------------------------------
+-----licence---------------------------------------------------------------------------------------
  
 MIT License
 
@@ -30,7 +30,7 @@ SOFTWARE.
  
 -----versions--------------------------------------------------------------------------------------
 
-Version 1.0.0 - Initial release
+Version 0.1.0 - Initial release
 
 -----description-----------------------------------------------------------------------------------
 
@@ -41,22 +41,24 @@ execution time of functions or code blocks. See the included README.MD file for 
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
 // --necessary standard libraries------------------------------------------------------------------
-#include <chrono>   // clocks and time representations
-#include <iostream> // std::cout, std::cerr
-#include <cstdint>  // size_t
-#include <ostream>  // std::ostream
+#include <chrono>   // for clocks and time representations
+#include <iostream> // for std::cout, std::cerr, std::endl
+#include <cstddef>  // for size_t
+#include <ostream>  // for std::ostream
+#include <string>   // for std::string
 // --Chronometro library---------------------------------------------------------------------------
 namespace Chronometro
 {
+  namespace Version
+  {
+    constexpr long NUMBER = 000001000;
+    constexpr long MAJOR  = 000      ;
+    constexpr long MINOR  =    001   ;
+    constexpr long PATCH  =       000;
+  }
 // --Chronometro library : frontend forward declarations-------------------------------------------
   inline namespace Frontend
   {
-    // library version
-    #define CHRONOMETRO_VERSION       001000000L
-    #define CHRONOMETRO_VERSION_MAJOR 1
-    #define CHRONOMETRO_VERSION_MINOR 0
-    #define CHRONOMETRO_VERSION_PATCH 0
-    
     // bring clocks to frontend
     using std::chrono::system_clock;
     using std::chrono::steady_clock;
@@ -83,13 +85,6 @@ namespace Chronometro
 
     // measure function execution time without function calling via pointers
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
-
-    // output stream
-    std::ostream out_stream(std::cout.rdbuf());
-    // error stream
-    std::ostream err_stream(std::cerr.rdbuf());
-    // warning stream
-    std::ostream wrn_stream(std::cerr.rdbuf());
   }
 // --Chronometro library : frontend struct and class definitions-----------------------------------
   inline namespace Frontend
@@ -117,6 +112,26 @@ namespace Chronometro
         typename C::time_point start_;
         // measured elapsed time
         typename C::duration duration_;
+      public:
+        // Stopwatch internals
+        struct Internals final {
+          // elapsed time prefix
+          static std::string label;
+          // warning message prefix
+          static std::string wrn_label;
+          // error message prefix
+          static std::string err_label;
+          // output ostream
+          static std::ostream out_ostream;
+          // error ostream
+          static std::ostream err_ostream;
+          // warning ostream
+          static std::ostream wrn_ostream;
+          // display or not elapsed time
+          static bool display;
+          // not meant to be instantiated
+          Internals(void) = delete;
+        };
     };
   }
 // --Chronometro library : backend forward declaration---------------------------------------------
@@ -147,7 +162,7 @@ namespace Chronometro
         // measure current time
         start_ = C::now();
       }
-      else wrn_stream << "warning: Stopwatch: already started\n";
+      else Internals::wrn_ostream << Internals::wrn_label << "already started" << std::endl;
     }
 
     template<typename C>
@@ -157,8 +172,9 @@ namespace Chronometro
       const typename C::duration duration = C::now() - start_;
 
       // add elapsed time up to now if not paused
-      if (paused_)
-        wrn_stream << "warning: Stopwatch: already paused\n";
+      if (paused_) {
+        Internals::wrn_ostream << Internals::wrn_label << "already paused" << std::endl;
+      }
       else {
         duration_ += duration;
         paused_ = true;
@@ -176,27 +192,30 @@ namespace Chronometro
       // measured time in nanoseconds
       const std::chrono::nanoseconds::rep nanoseconds = std::chrono::nanoseconds(duration_).count();
 
-      // if unit_ == automatic, deduce the appropriate unit
-      switch((unit_ == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit_) {
-        case Unit::ns:
-          out_stream << "elapsed time: " << nanoseconds << " ns\n";
-          break;
-        case Unit::us:
-          out_stream << "elapsed time: " << nanoseconds / 1000 << " us\n";
-          break;
-        case Unit::ms:
-          out_stream << "elapsed time: " << nanoseconds / 1000000 << " ms\n";
-          break;
-        case Unit::s:
-          out_stream << "elapsed time: " << nanoseconds / 1000000000 << " s\n";
-          break;
-        case Unit::min:
-          out_stream << "elapsed time: " << nanoseconds / 60000000000 << " min\n";
-          break;
-        case Unit::h:
-          out_stream << "elapsed time: " << nanoseconds / 3600000000000 << " h\n";
-          break;
-        default: err_stream << "error: Stopwatch: invalid time unit\n";
+      // conditionally display elapsed time
+      if (Internals::display) {
+        // if unit_ == automatic, deduce the appropriate unit
+        switch((unit_ == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit_) {
+          case Unit::ns:
+            Internals::out_ostream << Internals::label << nanoseconds << " ns" << std::endl;
+            break;
+          case Unit::us:
+            Internals::out_ostream << Internals::label << nanoseconds / 1000 << " us" << std::endl;
+            break;
+          case Unit::ms:
+            Internals::out_ostream << Internals::label << nanoseconds / 1000000 << " ms" << std::endl;
+            break;
+          case Unit::s:
+            Internals::out_ostream << Internals::label << nanoseconds / 1000000000 << " s" << std::endl;
+            break;
+          case Unit::min:
+            Internals::out_ostream << Internals::label << nanoseconds / 60000000000 << " min" << std::endl;
+            break;
+          case Unit::h:
+            Internals::out_ostream << Internals::label << nanoseconds / 3600000000000 << " h" << std::endl;
+            break;
+          default: Internals::err_ostream << Internals::err_label << "invalid time unit" << std::endl;
+        }
       }
 
       return duration_;
@@ -220,11 +239,32 @@ namespace Chronometro
     {
       // validate unit
       if (unit > Unit::automatic) {
-        wrn_stream << "warning: Stopwatch: invalid unit, automatic used instead\n";
+        Internals::wrn_ostream << Internals::wrn_label << "invalid unit, automatic used instead" << std::endl;
         unit_ = Unit::automatic;
       }
       else unit_ = unit;
     }
+
+    template<typename C>
+    std::ostream Stopwatch<C>::Internals::out_ostream{std::cout.rdbuf()};
+
+    template<typename C>
+    std::ostream Stopwatch<C>::Internals::err_ostream(std::cerr.rdbuf());
+
+    template<typename C>
+    std::ostream Stopwatch<C>::Internals::wrn_ostream(std::cerr.rdbuf());
+
+    template<typename C>
+    std::string Stopwatch<C>::Internals::label = "elapsed time: ";
+
+    template<typename C>
+    std::string Stopwatch<C>::Internals::wrn_label = "warning: Stopwatch: ";
+
+    template<typename C>
+    std::string Stopwatch<C>::Internals::err_label = "error: Stopwatch: ";
+
+    template<typename C>
+    bool Stopwatch<C>::Internals::display = true;
 
     template<typename C, typename F, typename... A>
     typename C::duration execution_time(const F function, const size_t repetitions, const A... arguments)
