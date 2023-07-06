@@ -85,6 +85,13 @@ namespace Chronometro
 
     // measure function execution time without function calling via pointers
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
+
+    // output ostream
+    static std::ostream out_ostream{std::cout.rdbuf()};
+    // error ostream
+    static std::ostream err_ostream{std::cerr.rdbuf()};
+    // warning ostream
+    static std::ostream wrn_ostream{std::cerr.rdbuf()};
   }
 // --Chronometro library : frontend struct and class definitions-----------------------------------
   inline namespace Frontend
@@ -92,46 +99,62 @@ namespace Chronometro
     template<typename C>
     class Stopwatch final {
       public:
-        inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
         // start measuring time
-        void start(void) noexcept;
-        // pause time measurement
+        inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
+        // display and return lap time
+        typename C::duration lap(void) noexcept;
+        // display and return split time
+        typename C::duration split(void) noexcept;
+        // pause measuring time
         typename C::duration pause(void) noexcept;
-        // stop time measurement and display elapsed time
-        typename C::duration stop(void) noexcept;
-        // reset measured time and start measuring time
-        inline void restart(void) noexcept;
-        // set unit
-        inline void set(const Unit unit) noexcept;
-      private:
+        // reset measured time
+        void reset(void) noexcept;
+        // unpause stopwatch
+        void unpause(void) noexcept;
+      public:
+        // used clock
+        using clock = C;
         // unit to be used when displaying elapsed time
-        Unit unit_;
-        // used to keep track stopwatch status
-        bool paused_;
-        // time either at construction or from last start/restart 
-        typename C::time_point start_;
+        const Unit unit;
+      private:
+        // display elapsed time
+        void display(const std::chrono::nanoseconds::rep nanoseconds, const std::string& asset) noexcept;
+        // used to keep track of the current status
+        bool is_paused_;
+        // time either at construction or from last unpause 
+        typename C::time_point previous_;
+        // time either at construction or from last unpause/lap
+        typename C::time_point previous_lap_;
         // measured elapsed time
         typename C::duration duration_;
+        // measured elapsed time
+        typename C::duration duration_lap_;
       public:
-        // Stopwatch internals
-        struct Internals final {
+        // Stopwatch settings
+        struct Settings final {
+          // display or not elapsed time
+          static bool display;
+          // not meant to be instantiated
+          Settings(void) = delete;
+        };
+        // Stopwatch assets
+        struct Assets final {
+          // lap time prefix
+          static std::string lap_time;
+          // split time prefix
+          static std::string split_time;
           // elapsed time prefix
-          static std::string label;
+          static std::string elapsed_time;
           // warning message prefix
           static std::string wrn_label;
           // error message prefix
           static std::string err_label;
-          // output ostream
-          static std::ostream out_ostream;
-          // error ostream
-          static std::ostream err_ostream;
-          // warning ostream
-          static std::ostream wrn_ostream;
-          // display or not elapsed time
-          static bool display;
           // not meant to be instantiated
-          Internals(void) = delete;
+          Assets(void) = delete;
         };
+      private:
+        inline void warning(const char*) noexcept;
+        inline void error(const char*) noexcept;
     };
   }
 // --Chronometro library : backend forward declaration---------------------------------------------
@@ -146,125 +169,165 @@ namespace Chronometro
     template<typename C>
     Stopwatch<C>::Stopwatch(const Unit unit) noexcept
       : // member initialization list
-      unit_(unit),
-      paused_(false),
-      start_(C::now()),
-      duration_(0)
+      unit((unit > Unit::automatic) ? warning("invalid unit, automatic used instead"), Unit::automatic : unit),
+      is_paused_(false),
+      previous_(C::now()),
+      previous_lap_(previous_),
+      duration_(0),
+      duration_lap_(0)
     {}
 
     template<typename C>
-    void Stopwatch<C>::start(void) noexcept
+    typename C::duration Stopwatch<C>::lap(void) noexcept
     {
-      if (paused_) {
-        // unpause
-        paused_ = false;
+      // measure current time
+      const typename C::time_point now = C::now();
 
-        // measure current time
-        start_ = C::now();
+      if (is_paused_ == false) {
+        // save elapsed times
+        duration_     += now - previous_;
+        duration_lap_ += now - previous_lap_;
+
+        // display lap time
+        display(std::chrono::nanoseconds(duration_lap_).count(), Assets::lap_time);
+        
+        // reset measured time
+        previous_     = C::now();
+        previous_lap_ = previous_;
+        duration_lap_ = typename C::duration(0);
       }
-      else Internals::wrn_ostream << Internals::wrn_label << "already started" << std::endl;
+      else warning("cannot measure lap, is paused");
+
+      return duration_lap_;
+    }
+
+    template<typename C>
+    typename C::duration Stopwatch<C>::split(void) noexcept
+    {
+      // measure current time
+      const typename C::time_point now = C::now();
+
+      if (is_paused_ == false) {
+        // save elapsed times
+        duration_     += now - previous_;
+        duration_lap_ += now - previous_lap_;
+
+        // display split time
+        display(std::chrono::nanoseconds(duration_).count(), Assets::split_time);
+        
+        // save time point
+        previous_     = C::now();
+        previous_lap_ = previous_;
+      }
+      else warning("cannot measure split, is paused");
+      
+      return duration_;
     }
 
     template<typename C>
     typename C::duration Stopwatch<C>::pause(void) noexcept
     {
-      // measure elapsed time
-      const typename C::duration duration = C::now() - start_;
+      // measure current time
+      const typename C::time_point now = C::now();
 
       // add elapsed time up to now if not paused
-      if (paused_) {
-        Internals::wrn_ostream << Internals::wrn_label << "already paused" << std::endl;
+      if (is_paused_ == false) {
+        // pause
+        is_paused_ = true;
+
+        // save elapsed times
+        duration_     += now - previous_;
+        duration_lap_ += now - previous_lap_;
       }
-      else {
-        duration_ += duration;
-        paused_ = true;
-      }
+      else warning("cannot pause further, is already paused");
 
       return duration_;
     }
 
     template<typename C>
-    typename C::duration Stopwatch<C>::stop(void) noexcept
+    void Stopwatch<C>::reset(void) noexcept
     {
-      // pause time measurement
-      pause();
+      if (is_paused_ == true) {
+        // reset measured time
+        duration_     = typename C::duration(0);
+        duration_lap_ = typename C::duration(0);
+      }
+      else warning("cannot reset, must be paused");
+    }
 
-      // measured time in nanoseconds
-      const std::chrono::nanoseconds::rep nanoseconds = std::chrono::nanoseconds(duration_).count();
+    template<typename C>
+    void Stopwatch<C>::unpause(void) noexcept
+    {
+      if (is_paused_ == true) {
+        // unpause
+        is_paused_ = false;
 
+        // reset measured time
+        previous_     = C::now();
+        previous_lap_ = previous_;
+      }
+      else warning("cannot unpause further, is already unpaused");
+    }
+    
+    template<typename C>
+    void Stopwatch<C>::display(const std::chrono::nanoseconds::rep nanoseconds, const std::string& asset) noexcept
+    {
       // conditionally display elapsed time
-      if (Internals::display) {
+      if (Settings::display) {
         // if unit_ == automatic, deduce the appropriate unit
-        switch((unit_ == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit_) {
+        switch((unit == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit) {
           case Unit::ns:
-            Internals::out_ostream << Internals::label << nanoseconds << " ns" << std::endl;
+            out_ostream << asset << nanoseconds << " ns" << std::endl;
             break;
           case Unit::us:
-            Internals::out_ostream << Internals::label << nanoseconds / 1000 << " us" << std::endl;
+            out_ostream << asset << nanoseconds / 1000 << " us" << std::endl;
             break;
           case Unit::ms:
-            Internals::out_ostream << Internals::label << nanoseconds / 1000000 << " ms" << std::endl;
+            out_ostream << asset << nanoseconds / 1000000 << " ms" << std::endl;
             break;
           case Unit::s:
-            Internals::out_ostream << Internals::label << nanoseconds / 1000000000 << " s" << std::endl;
+            out_ostream << asset << nanoseconds / 1000000000 << " s" << std::endl;
             break;
           case Unit::min:
-            Internals::out_ostream << Internals::label << nanoseconds / 60000000000 << " min" << std::endl;
+            out_ostream << asset << nanoseconds / 60000000000 << " min" << std::endl;
             break;
           case Unit::h:
-            Internals::out_ostream << Internals::label << nanoseconds / 3600000000000 << " h" << std::endl;
+            out_ostream << asset << nanoseconds / 3600000000000 << " h" << std::endl;
             break;
-          default: Internals::err_ostream << Internals::err_label << "invalid time unit" << std::endl;
+          default: error("invalid time unit");
         }
       }
-
-      return duration_;
     }
 
     template<typename C>
-    void Stopwatch<C>::restart(void) noexcept
+    void Stopwatch<C>::warning(const char* message) noexcept
     {
-      // reset measured duration
-      duration_ = typename C::duration(0);
-
-      // unpause
-      paused_ = false;
-
-      // measure current time
-      start_ = C::now();
+      wrn_ostream << Assets::wrn_label << message << std::endl;
     }
 
     template<typename C>
-    void Stopwatch<C>:: set(const Unit unit) noexcept
+    void Stopwatch<C>::error(const char* message) noexcept
     {
-      // validate unit
-      if (unit > Unit::automatic) {
-        Internals::wrn_ostream << Internals::wrn_label << "invalid unit, automatic used instead" << std::endl;
-        unit_ = Unit::automatic;
-      }
-      else unit_ = unit;
+      err_ostream << Assets::err_label << message << std::endl;
     }
 
     template<typename C>
-    std::ostream Stopwatch<C>::Internals::out_ostream{std::cout.rdbuf()};
+    bool Stopwatch<C>::Settings::display = true;
 
     template<typename C>
-    std::ostream Stopwatch<C>::Internals::err_ostream(std::cerr.rdbuf());
+    std::string Stopwatch<C>::Assets::lap_time = "lap time: ";
 
     template<typename C>
-    std::ostream Stopwatch<C>::Internals::wrn_ostream(std::cerr.rdbuf());
+    std::string Stopwatch<C>::Assets::split_time = "split time: ";
 
     template<typename C>
-    std::string Stopwatch<C>::Internals::label = "elapsed time: ";
+    std::string Stopwatch<C>::Assets::elapsed_time = "elapsed time: ";
 
     template<typename C>
-    std::string Stopwatch<C>::Internals::wrn_label = "warning: Stopwatch: ";
+    std::string Stopwatch<C>::Assets::wrn_label = "warning: Stopwatch: ";
 
     template<typename C>
-    std::string Stopwatch<C>::Internals::err_label = "error: Stopwatch: ";
-
-    template<typename C>
-    bool Stopwatch<C>::Internals::display = true;
+    std::string Stopwatch<C>::Assets::err_label = "error: Stopwatch: ";
 
     template<typename C, typename F, typename... A>
     typename C::duration execution_time(const F function, const size_t repetitions, const A... arguments)
@@ -278,12 +341,13 @@ namespace Chronometro
     }
 
     #undef  CHRONOMETRO_EXECUTION_TIME
-    #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)                     \
-      [&](void) {                                                                      \
-        Chronometro::Stopwatch<> _stopwatch_;                                          \
-        for (size_t _iteration_ = 0; _iteration_ < size_t(repetitions); ++_iteration_) \
-          function(__VA_ARGS__);                                                       \
-        return _stopwatch_.stop();                                                     \
+    #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)           \
+      [&](void) {                                                            \
+        Chronometro::Stopwatch<> stopw_atch;                                 \
+        const size_t repet_itions = repetitions;                             \
+        for (size_t itera_tion = 0; itera_tion < repet_itions; ++itera_tion) \
+          function(__VA_ARGS__);                                             \
+        return stopw_atch.split();                                            \
       }()
   }
 // --Chronometro library : backend definitions-----------------------------------------------------

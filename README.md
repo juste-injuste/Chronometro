@@ -58,12 +58,12 @@ _Methods_:
 * `set(unit)` sets the unit used when displaying the elapsed time.
 
 _Error_:
-* `stop()` will issue `"error: Stopwatch: invalid time unit\n"` if the unit is invalid.
+* `stop()` will issue `"error: Stopwatch: invalid time unit"` if the unit is invalid.
 
 _Warnings_:
-* `start()` will issue `"warning: Stopwatch: already started\n"` if the stopwatch was already measuring time.
-* `stop()` and `pause()` will issue `"warning: Stopwatch: already paused\n"` if the stopwatch was already paused.
-* `set(unit)` will issue `"warning: Stopwatch: invalid unit, automatic used instead\n"` if the unit is invalid.
+* `start()` will issue `"warning: Stopwatch: already started"` if the stopwatch was already measuring time.
+* `stop()` and `pause()` will issue `"warning: Stopwatch: already paused"` if the stopwatch was already paused.
+* `set(unit)` will issue `"warning: Stopwatch: invalid unit; automatic used instead"` if the unit is invalid.
 
 _Examples_:
 ```cpp
@@ -151,8 +151,8 @@ int main()
 ```
 
 _Limitations_:
-* You may not use the CHRONOMETRO_EXECUTION_TIME macro with variables named `_iteration_` or `_stopwatch_`; otherwise there will be name collision and undefined behavior.
 * The CHRONOMETRO_EXECUTION_TIME does not allow to specify a clock; `std::chrono::high_resolution_clock` is used.
+* You may not use the CHRONOMETRO_EXECUTION_TIME macro with variables named `stopw_atch`, `itera_tion` or `repet_itions`; otherwise name collision occurs leading to undefined behavior.
 
 ---
 
