@@ -48,14 +48,20 @@ _Template_:
 * `C` is the clock used to measure time. The default is `std::chrono::high_resolution_clock`.
 
 _Constructor_:
-* `unit` sets the unit used when displaying elapsed time. The default is `Unit::automatic`.
+* `unit` sets the unit used when displaying elapsed time.
 
 _Methods_:
-* `start()` starts measuring time.
-* `pause()` stops time measurement until the next `start()` or `restart()`, and returns the elapsed time as the `C::duration` type.
-* `stop()` stops time measurement, displays elapsed time and returns it as the `C::duration` type.
-* `restart()` resets and starts measuring elapsed time.
-* `set(unit)` sets the unit used when displaying the elapsed time.
+* `lap() -> C::duration` displays and returns the elapsed time since the last `lap()` call (or since construction if no previous `lap()` were made).
+* `split() -> C::duration` displays and returns the elapsed time since construction.
+* `pause()` pauses time measurement.
+* `reset()` resets the measured elapsed times.
+* `unpause()` unpauses time measurement.
+
+_Members_:
+* `unit` is the units used by the stopwatch when displaying elapsed times.
+
+_Types_:
+* `clock` is the clock used by the stopwatch.
 
 _Error_:
 * `stop()` will issue `"error: Stopwatch: invalid time unit"` if the unit is invalid.
