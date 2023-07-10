@@ -77,11 +77,11 @@ namespace Chronometro
     };
 
     // measure elapsed time
-    template<Unit U = Unit::automatic, typename C = high_resolution_clock>
+    template<typename C = high_resolution_clock>
     class Stopwatch;
 
     // measure function execution time
-    template<Unit U = Unit::automatic, typename C = high_resolution_clock, typename F, typename... A>
+    template<typename C = high_resolution_clock, typename F, typename... A>
     typename C::duration execution_time(const F function, const size_t repetitions, const A... arguments);
 
     // measure function execution time without function calling via pointers
@@ -97,11 +97,11 @@ namespace Chronometro
 // --Chronometro library : frontend struct and class definitions-----------------------------------
   inline namespace Frontend
   {
-    template<Unit U, typename C>
+    template<typename C>
     class Stopwatch final {
       public:
         // start measuring time
-        inline explicit Stopwatch() noexcept;
+        inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
         // display and return lap time
         typename C::duration lap(void) noexcept;
         // display and return split time
@@ -116,7 +116,7 @@ namespace Chronometro
         // used clock
         using clock = C;
         // unit to be used when displaying elapsed time
-        const Unit unit = U;
+        const Unit unit;
       private:
         // display elapsed time
         void display(const nanoseconds::rep nanoseconds, const std::string& asset) const noexcept;
@@ -145,10 +145,10 @@ namespace Chronometro
 // --Chronometro library : frontend definitions----------------------------------------------------
   inline namespace Frontend
   {
-    template<Unit U, typename C>
-    Stopwatch<U, C>::Stopwatch() noexcept
+    template<typename C>
+    Stopwatch<C>::Stopwatch(const Unit unit) noexcept
       : // member initialization list
-      //unit((unit > Unit::automatic) ? warning("invalid unit, automatic used instead"), Unit::automatic : unit),
+      unit((unit > Unit::automatic) ? warning("invalid unit, automatic used instead"), Unit::automatic : unit),
       is_paused_(false),
       duration_(0),
       duration_lap_(0),
@@ -156,8 +156,8 @@ namespace Chronometro
       previous_lap_(previous_)
     {}
 
-    template<Unit U, typename C>
-    typename C::duration Stopwatch<U, C>::lap(void) noexcept
+    template<typename C>
+    typename C::duration Stopwatch<C>::lap(void) noexcept
     {
       // measure current time
       const typename C::time_point now = C::now();
@@ -175,13 +175,13 @@ namespace Chronometro
         previous_     = C::now();
         previous_lap_ = previous_;
       }
-      else warning("cannot measure lap, is paused");
+      else warning("cannot measure lap, must not be paused");
 
       return duration_lap_;
     }
 
-    template<Unit U, typename C>
-    typename C::duration Stopwatch<U, C>::split(void) noexcept
+    template<typename C>
+    typename C::duration Stopwatch<C>::split(void) noexcept
     {
       // measure current time
       const typename C::time_point now = C::now();
@@ -198,13 +198,13 @@ namespace Chronometro
         previous_     = C::now();
         previous_lap_ = previous_;
       }
-      else warning("cannot measure split, is paused");
+      else warning("cannot measure split, must not be paused");
       
       return duration_;
     }
 
-    template<Unit U, typename C>
-    void Stopwatch<U, C>::pause(void) noexcept
+    template<typename C>
+    void Stopwatch<C>::pause(void) noexcept
     {
       // measure current time
       const typename C::time_point now = C::now();
@@ -221,19 +221,22 @@ namespace Chronometro
       else warning("cannot pause further, is already paused");
     }
 
-    template<Unit U, typename C>
-    void Stopwatch<U, C>::reset(void) noexcept
+    template<typename C>
+    void Stopwatch<C>::reset(void) noexcept
     {
-      if (is_paused_ == true) {
-        // reset measured time
-        duration_     = typename C::duration(0);
-        duration_lap_ = typename C::duration(0);
-      }
-      else warning("cannot reset, must be paused");
+      // reset measured time
+      duration_     = typename C::duration(0);
+      duration_lap_ = typename C::duration(0);
+
+      // hot reset if unpaused
+      if (is_paused_ == false) {
+        previous_     = C::now();
+        previous_lap_ = previous_;
+      } 
     }
 
-    template<Unit U, typename C>
-    void Stopwatch<U, C>::unpause(void) noexcept
+    template<typename C>
+    void Stopwatch<C>::unpause(void) noexcept
     {
       if (is_paused_ == true) {
         // unpause
@@ -246,49 +249,49 @@ namespace Chronometro
       else warning("is already unpaused");
     }
     
-    template<Unit U, typename C>
-    void Stopwatch<U, C>::display(const nanoseconds::rep nanoseconds, const std::string& asset) const noexcept
+    template<typename C>
+    void Stopwatch<C>::display(const nanoseconds::rep nanoseconds, const std::string& asset) const noexcept
     {
       // if unit_ == automatic, deduce the appropriate unit
       switch((unit == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit) {
         case Unit::ns:
           out_ostream << asset << nanoseconds << " ns" << std::endl;
-          break;
+          return;
         case Unit::us:
           out_ostream << asset << nanoseconds / 1000 << " us" << std::endl;
-          break;
+          return;
         case Unit::ms:
           out_ostream << asset << nanoseconds / 1000000 << " ms" << std::endl;
-          break;
+          return;
         case Unit::s:
           out_ostream << asset << nanoseconds / 1000000000 << " s" << std::endl;
-          break;
+          return;
         case Unit::min:
           out_ostream << asset << nanoseconds / 60000000000 << " min" << std::endl;
-          break;
+          return;
         case Unit::h:
           out_ostream << asset << nanoseconds / 3600000000000 << " h" << std::endl;
-          break;
-        default: error("invalid time unit");
+          return;
+        default: error("invalid unit, invalid code path reached");
       }
     }
 
-    template<Unit U, typename C>
-    void Stopwatch<U, C>::warning(const char* message) const noexcept
+    template<typename C>
+    void Stopwatch<C>::warning(const char* message) const noexcept
     {
       wrn_ostream << "warning: Stopwatch: " << message << std::endl;
     }
 
-    template<Unit U, typename C>
-    void Stopwatch<U, C>::error(const char* message) const noexcept
+    template<typename C>
+    void Stopwatch<C>::error(const char* message) const noexcept
     {
-      err_ostream << "error: Stopwatch: " << message << std::endl;
+      wrn_ostream << "error: Stopwatch: " << message << std::endl;
     }
 
-    template<Unit U, typename C, typename F, typename... A>
+    template<typename C, typename F, typename... A>
     typename C::duration execution_time(const F function, const size_t repetitions, const A... arguments)
     {
-      Stopwatch<U, C> stopwatch;
+      Stopwatch<C> stopwatch;
 
       for (size_t iteration = 0; iteration < repetitions; ++iteration)
         function(arguments...);

@@ -45,31 +45,17 @@ Stopwatch<C = high_resolution_clock>(unit = automatic)
 The Stopwatch class allows to measure the time it takes to execute code blocks. A stopwatch may be started, paused stopped, restarted or have its unit set. When a stopwatch is stopped, it displays the elapsed time. Pausing or stopping a stopwatch returns the elapsed time as the `C::duration` type. A stopwatch starts measuring time upon creation.
 
 _Template_:
-* `C` is the clock used to measure time. The default is `std::chrono::high_resolution_clock`.
+* `C` is the clock used to measure time.
 
 _Constructor_:
 * `unit` sets the unit used when displaying elapsed time.
 
 _Methods_:
-* `lap() -> C::duration` displays and returns the elapsed time since the last `lap()` call (or since construction if no previous `lap()` were made).
+* `lap() -> C::duration` displays and returns the elapsed time since the last `lap()` (or construction).
 * `split() -> C::duration` displays and returns the elapsed time since construction.
 * `pause()` pauses time measurement.
 * `reset()` resets the measured elapsed times.
 * `unpause()` unpauses time measurement.
-
-_Members_:
-* `unit` is the units used by the stopwatch when displaying elapsed times.
-
-_Types_:
-* `clock` is the clock used by the stopwatch.
-
-_Error_:
-* `stop()` will issue `"error: Stopwatch: invalid time unit"` if the unit is invalid.
-
-_Warnings_:
-* `start()` will issue `"warning: Stopwatch: already started"` if the stopwatch was already measuring time.
-* `stop()` and `pause()` will issue `"warning: Stopwatch: already paused"` if the stopwatch was already paused.
-* `set(unit)` will issue `"warning: Stopwatch: invalid unit; automatic used instead"` if the unit is invalid.
 
 _Examples_:
 ```cpp
@@ -87,15 +73,32 @@ int main()
 
   sleep_for_ms(1000); // not measured by the stopwatch
 
-  stopwatch_1.start();
+  stopwatch_1.unpause();
   sleep_for_ms(70);
-  stopwatch_1.stop(); // prints "elapsed time: 100 ms"
-
-  stopwatch_1.restart();
+  stopwatch_1.split(); // prints "elapsed time: 100 ms"
+  stopwatch_1.pause()
+  stopwatch_1.reset();
+  stopwatch_1.unpause();
   sleep_for_ms(500);
   stopwatch_1.stop(); // prints "elapsed time: 500 ms"
 }
 ```
+
+_Members_:
+* `unit` is the units used by the stopwatch when displaying elapsed times.
+
+_Types_:
+* `clock` is the clock used by the stopwatch.
+
+_Warnings_:
+* `"cannot measure lap, must not be paused"`
+* `"cannot measure split, must not be paused"`
+* `"is already paused"`
+* `"is already unpaused"`
+* `"invalid unit, automatic used instead"`
+
+_Error_:
+* `"invalid unit, invalid code path reached"`
 
 ---
 
@@ -107,7 +110,7 @@ execution_time<C = high_resolution_clock>(function, repetitions, ...arguments)
 The execution_time function allows to measure the time it takes to execute a function for a specified number of repetitions. After the repetitions are done, the elapsed time is displayed using the `Unit::automatic` time unit and is returned as the `C::duration` type.
 
 _Template_:
-* `C` is the clock used to measure time. The default is `std::chrono::high_resolution_clock`.
+* `C` is the clock used to measure time.
 
 _Arguments_:
 * `function` is the function whose execution time will be measured.
