@@ -51,10 +51,10 @@ namespace Chronometro
 {
   namespace Version
   {
-    constexpr long NUMBER = 000001000;
-    constexpr long MAJOR  = 000      ;
-    constexpr long MINOR  =    001   ;
-    constexpr long PATCH  =       000;
+    constexpr long MAJOR  = 000;
+    constexpr long MINOR  = 001;
+    constexpr long PATCH  = 000;
+    constexpr long NUMBER = (MAJOR * 1000 + MINOR) * 1000 + PATCH;
   }
 // --Chronometro library : frontend forward declarations-------------------------------------------
   inline namespace Frontend
@@ -285,7 +285,7 @@ namespace Chronometro
     template<typename C>
     void Stopwatch<C>::error(const char* message) const noexcept
     {
-      wrn_ostream << "error: Stopwatch: " << message << std::endl;
+      err_ostream << "error: Stopwatch: " << message << std::endl;
     }
 
     template<typename C, typename F, typename... A>
