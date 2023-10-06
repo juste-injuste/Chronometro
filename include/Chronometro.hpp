@@ -121,9 +121,9 @@ namespace Chronometro
         // display elapsed time
         void display(const nanoseconds::rep nanoseconds, const std::string& asset) const noexcept;
         // issue warning
-        inline void warning(const char*) const noexcept;
+        inline void warning(const char* message) const noexcept;
         // issue error
-        inline void error(const char*) const noexcept;
+        inline void error(const char* message) const noexcept;
         // used to keep track of the current status
         bool is_paused_;
         // measured elapsed time
