@@ -167,7 +167,7 @@ _Limitations_:
 
 ## Streams
 
-Chronometro defines these following `std::ostream`s, which may be [redirected](https://github.com/juste-injuste/Katagrafeas):
+Chronometro outputs these following `std::ostream`s:
 * `out_stream` elapsed times go through here (linked to `std::cout` by default).
 * `err_stream` errors go through here (linked to `std::cerr` by default).
 * `wrn_stream` warnings go through here (linked to `std::cerr` by default).
@@ -176,7 +176,7 @@ Chronometro defines these following `std::ostream`s, which may be [redirected](h
 
 ## Examples
 
-For more extensive examples, including basic stream redirection, see [examples.cpp](examples.cpp).
+For more extensive examples, including basic stream redirection, see [main.cpp](examples/main.cpp).
 
 ---
 

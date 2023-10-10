@@ -44,6 +44,7 @@ execution time of functions or code blocks. See the included README.MD file for 
 #include <chrono>   // for clocks and time representations
 #include <iostream> // for std::cout, std::cerr, std::endl
 #include <cstddef>  // for size_t
+#include <cstdint>  // for uint8_t
 #include <ostream>  // for std::ostream
 #include <string>   // for std::string
 // --Chronometro library---------------------------------------------------------------------------
@@ -51,9 +52,9 @@ namespace Chronometro
 {
   namespace Version
   {
-    constexpr long MAJOR  = 000;
-    constexpr long MINOR  = 001;
-    constexpr long PATCH  = 000;
+    const long MAJOR = 000;
+    const long MINOR = 001;
+    const long PATCH = 000;
     constexpr long NUMBER = (MAJOR * 1000 + MINOR) * 1000 + PATCH;
   }
 // --Chronometro library : frontend forward declarations-------------------------------------------
@@ -66,7 +67,8 @@ namespace Chronometro
     using std::chrono::nanoseconds;
 
     // time units for displaying
-    enum class Unit : uint8_t {
+    enum class Unit : uint8_t
+    {
       ns,       // nanoseconds
       us,       // microseconds
       ms,       // milliseconds
@@ -98,20 +100,21 @@ namespace Chronometro
   inline namespace Frontend
   {
     template<typename C>
-    class Stopwatch final {
+    class Stopwatch final
+    {
       public:
         // start measuring time
         inline explicit Stopwatch(const Unit unit = Unit::automatic) noexcept;
         // display and return lap time
-        typename C::duration lap(void) noexcept;
+        typename C::duration lap() noexcept;
         // display and return split time
-        typename C::duration split(void) noexcept;
+        typename C::duration split() noexcept;
         // pause time measurement
-        void pause(void) noexcept;
+        void pause() noexcept;
         // reset measured times
-        void reset(void) noexcept;
+        void reset() noexcept;
         // unpause time measurement
-        void unpause(void) noexcept;
+        void unpause() noexcept;
       public:
         // used clock
         using clock = C;
@@ -146,23 +149,23 @@ namespace Chronometro
   inline namespace Frontend
   {
     template<typename C>
-    Stopwatch<C>::Stopwatch(const Unit unit) noexcept
-      : // member initialization list
+    Stopwatch<C>::Stopwatch(const Unit unit) noexcept :
       unit((unit > Unit::automatic) ? warning("invalid unit, automatic used instead"), Unit::automatic : unit),
       is_paused_(false),
-      duration_(0),
-      duration_lap_(0),
+      duration_{0},
+      duration_lap_{0},
       previous_(C::now()),
       previous_lap_(previous_)
     {}
 
     template<typename C>
-    typename C::duration Stopwatch<C>::lap(void) noexcept
+    typename C::duration Stopwatch<C>::lap() noexcept
     {
       // measure current time
       const typename C::time_point now = C::now();
 
-      if (is_paused_ == false) {
+      if (is_paused_ == false)
+      {
         // save elapsed times
         duration_     += now - previous_;
         duration_lap_ += now - previous_lap_;
@@ -171,7 +174,7 @@ namespace Chronometro
         display(nanoseconds(duration_lap_).count(), "lap time: ");
         
         // reset measured time
-        duration_lap_ = typename C::duration(0);
+        duration_lap_ = typename C::duration{0};
         previous_     = C::now();
         previous_lap_ = previous_;
       }
@@ -186,7 +189,8 @@ namespace Chronometro
       // measure current time
       const typename C::time_point now = C::now();
 
-      if (is_paused_ == false) {
+      if (is_paused_ == false)
+      {
         // save elapsed times
         duration_     += now - previous_;
         duration_lap_ += now - previous_lap_;
@@ -210,7 +214,8 @@ namespace Chronometro
       const typename C::time_point now = C::now();
 
       // add elapsed time up to now if not paused
-      if (is_paused_ == false) {
+      if (is_paused_ == false)
+      {
         // pause
         is_paused_ = true;
 
@@ -225,11 +230,12 @@ namespace Chronometro
     void Stopwatch<C>::reset(void) noexcept
     {
       // reset measured time
-      duration_     = typename C::duration(0);
-      duration_lap_ = typename C::duration(0);
+      duration_     = typename C::duration{0};
+      duration_lap_ = typename C::duration{0};
 
       // hot reset if unpaused
-      if (is_paused_ == false) {
+      if (is_paused_ == false)
+      {
         previous_     = C::now();
         previous_lap_ = previous_;
       } 
@@ -238,7 +244,8 @@ namespace Chronometro
     template<typename C>
     void Stopwatch<C>::unpause(void) noexcept
     {
-      if (is_paused_ == true) {
+      if (is_paused_ == true)
+      {
         // unpause
         is_paused_ = false;
 
@@ -253,7 +260,8 @@ namespace Chronometro
     void Stopwatch<C>::display(const nanoseconds::rep nanoseconds, const std::string& asset) const noexcept
     {
       // if unit_ == automatic, deduce the appropriate unit
-      switch((unit == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit) {
+      switch((unit == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit)
+      {
         case Unit::ns:
           out_ostream << asset << nanoseconds << " ns" << std::endl;
           return;
@@ -294,18 +302,23 @@ namespace Chronometro
       Stopwatch<C> stopwatch;
 
       for (size_t iteration = 0; iteration < repetitions; ++iteration)
+      {
         function(arguments...);
+      }
 
       return stopwatch.split();
     }
 
     #undef  CHRONOMETRO_EXECUTION_TIME
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)           \
-      [&](void) {                                                            \
+      [&](void) -> Chronometro::high_resolution_clock::duration              \
+      {                                                                      \
         Chronometro::Stopwatch<> stopw_atch;                                 \
         const size_t repet_itions = repetitions;                             \
         for (size_t itera_tion = 0; itera_tion < repet_itions; ++itera_tion) \
+        {                                                                    \
           function(__VA_ARGS__);                                             \
+        }                                                                    \
         return stopw_atch.split();                                           \
       }()
   }

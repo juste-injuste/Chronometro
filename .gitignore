@@ -32,5 +32,6 @@
 *.app
 
 # Folders
-.vscode
-output
+**/.vscode/**
+**/output/**
+**/build/**
