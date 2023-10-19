@@ -54,7 +54,7 @@ void stopwatch_tests()
   stopwatch_3.unpause();
   sleep_for_ms(10);
   stopwatch_3.split(); // prints ~"elapsed time: 17 ms"
-  const_cast<Unit&>(stopwatch_3.unit) = Unit(42); // force invalid unit
+  /* do not do this*/ const_cast<Unit&>(stopwatch_3.unit) = Unit(42); // force invalid unit
   stopwatch_3.lap();   // error issued
 }
 
@@ -80,23 +80,23 @@ int main()
   std::ofstream file_2("function_tests.txt");
   std::ofstream file_3("macro_tests.txt");
 
-  Chronometro::out_ostream.rdbuf(file_1.rdbuf()); // redirect output
-  Chronometro::wrn_ostream.rdbuf(file_1.rdbuf()); // redirect warnings
-  Chronometro::err_ostream.rdbuf(file_1.rdbuf()); // redirect errors
+  Chronometro::Global::out.rdbuf(file_1.rdbuf()); // redirect output
+  Chronometro::Global::wrn.rdbuf(file_1.rdbuf()); // redirect warnings
+  Chronometro::Global::err.rdbuf(file_1.rdbuf()); // redirect errors
   std::cout << "running Stopwatch tests...\n";
   stopwatch_tests();
   std::cout << "Stopwatch tests done, see \"stopwatch_tests.txt\" for the output\n\n";
 
-  Chronometro::out_ostream.rdbuf(file_2.rdbuf()); // redirect output
-  Chronometro::wrn_ostream.rdbuf(file_2.rdbuf()); // redirect warnings
-  Chronometro::err_ostream.rdbuf(file_2.rdbuf()); // redirect errors
+  Chronometro::Global::out.rdbuf(file_2.rdbuf()); // redirect output
+  Chronometro::Global::wrn.rdbuf(file_2.rdbuf()); // redirect warnings
+  Chronometro::Global::err.rdbuf(file_2.rdbuf()); // redirect errors
   std::cout << "running execution_time tests...\n";
   function_tests();
   std::cout << "execution_time tests done, see \"function_tests.txt\" for the output\n\n";
 
-  Chronometro::out_ostream.rdbuf(file_3.rdbuf()); // redirect output
-  Chronometro::wrn_ostream.rdbuf(file_3.rdbuf()); // redirect warnings
-  Chronometro::err_ostream.rdbuf(file_3.rdbuf()); // redirect errors
+  Chronometro::Global::out.rdbuf(file_3.rdbuf()); // redirect output
+  Chronometro::Global::wrn.rdbuf(file_3.rdbuf()); // redirect warnings
+  Chronometro::Global::err.rdbuf(file_3.rdbuf()); // redirect errors
   std::cout << "running CHRONOMETRO_EXECUTION_TIME tests...\n";
   macro_tests();
   std::cout << "CHRONOMETRO_EXECUTION_TIME tests done, see \"macro_tests.txt\" for the output\n\n";

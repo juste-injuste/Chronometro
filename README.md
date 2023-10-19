@@ -167,10 +167,10 @@ _Limitations_:
 
 ## Streams
 
-Chronometro outputs these following `std::ostream`s:
-* `out_stream` elapsed times go through here (linked to `std::cout` by default).
-* `err_stream` errors go through here (linked to `std::cerr` by default).
-* `wrn_stream` warnings go through here (linked to `std::cerr` by default).
+Chronometro outputs these following `std::ostream`s (defined in the `Global` namespace):
+* `out` elapsed times go through here (linked to `std::cout` by default).
+* `err` errors go through here (linked to `std::cerr` by default).
+* `wrn` warnings go through here (linked to `std::cerr` by default).
 
 ---
 

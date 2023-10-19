@@ -89,12 +89,12 @@ namespace Chronometro
     // measure function execution time without function calling via pointers
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
 
-    // output ostream
-    std::ostream out_ostream{std::cout.rdbuf()};
-    // error ostream
-    std::ostream err_ostream{std::cerr.rdbuf()};
-    // warning ostream
-    std::ostream wrn_ostream{std::cerr.rdbuf()};
+    namespace Global
+    {
+      std::ostream out{std::cout.rdbuf()}; // output ostream
+      std::ostream err{std::cerr.rdbuf()}; // error ostream
+      std::ostream wrn{std::cerr.rdbuf()}; // warning ostream
+    }
   }
 // --Chronometro library : frontend struct and class definitions-----------------------------------
   inline namespace Frontend
@@ -263,22 +263,22 @@ namespace Chronometro
       switch((unit == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit)
       {
         case Unit::ns:
-          out_ostream << asset << nanoseconds << " ns" << std::endl;
+          Global::out << asset << nanoseconds << " ns" << std::endl;
           return;
         case Unit::us:
-          out_ostream << asset << nanoseconds / 1000 << " us" << std::endl;
+          Global::out << asset << nanoseconds / 1000 << " us" << std::endl;
           return;
         case Unit::ms:
-          out_ostream << asset << nanoseconds / 1000000 << " ms" << std::endl;
+          Global::out << asset << nanoseconds / 1000000 << " ms" << std::endl;
           return;
         case Unit::s:
-          out_ostream << asset << nanoseconds / 1000000000 << " s" << std::endl;
+          Global::out << asset << nanoseconds / 1000000000 << " s" << std::endl;
           return;
         case Unit::min:
-          out_ostream << asset << nanoseconds / 60000000000 << " min" << std::endl;
+          Global::out << asset << nanoseconds / 60000000000 << " min" << std::endl;
           return;
         case Unit::h:
-          out_ostream << asset << nanoseconds / 3600000000000 << " h" << std::endl;
+          Global::out << asset << nanoseconds / 3600000000000 << " h" << std::endl;
           return;
         default: error("invalid unit, invalid code path reached");
       }
@@ -287,13 +287,13 @@ namespace Chronometro
     template<typename C>
     void Stopwatch<C>::warning(const char* message) const noexcept
     {
-      wrn_ostream << "warning: Stopwatch: " << message << std::endl;
+      Global::wrn << "warning: Stopwatch: " << message << std::endl;
     }
 
     template<typename C>
     void Stopwatch<C>::error(const char* message) const noexcept
     {
-      err_ostream << "error: Stopwatch: " << message << std::endl;
+      Global::err << "error: Stopwatch: " << message << std::endl;
     }
 
     template<typename C, typename F, typename... A>
@@ -313,8 +313,8 @@ namespace Chronometro
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)           \
       [&](void) -> Chronometro::high_resolution_clock::duration              \
       {                                                                      \
-        Chronometro::Stopwatch<> stopw_atch;                                 \
         const size_t repet_itions = repetitions;                             \
+        Chronometro::Stopwatch<> stopw_atch;                                 \
         for (size_t itera_tion = 0; itera_tion < repet_itions; ++itera_tion) \
         {                                                                    \
           function(__VA_ARGS__);                                             \
