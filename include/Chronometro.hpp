@@ -57,6 +57,13 @@ namespace Chronometro
     const long PATCH = 000;
     constexpr long NUMBER = (MAJOR * 1000 + MINOR) * 1000 + PATCH;
   }
+
+  namespace Global
+  {
+    std::ostream out{std::cout.rdbuf()}; // output ostream
+    std::ostream err{std::cerr.rdbuf()}; // error ostream
+    std::ostream wrn{std::cerr.rdbuf()}; // warning ostream
+  }
 // --Chronometro library : frontend forward declarations-------------------------------------------
   inline namespace Frontend
   {
@@ -89,12 +96,8 @@ namespace Chronometro
     // measure function execution time without function calling via pointers
     #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)
 
-    namespace Global
-    {
-      std::ostream out{std::cout.rdbuf()}; // output ostream
-      std::ostream err{std::cerr.rdbuf()}; // error ostream
-      std::ostream wrn{std::cerr.rdbuf()}; // warning ostream
-    }
+    // repeats the following statement/block n times
+    #define CHRONOMETRO_REPEAT(n)
   }
 // --Chronometro library : frontend struct and class definitions-----------------------------------
   inline namespace Frontend
@@ -260,7 +263,7 @@ namespace Chronometro
     void Stopwatch<C>::display(const nanoseconds::rep nanoseconds, const std::string& asset) const noexcept
     {
       // if unit_ == automatic, deduce the appropriate unit
-      switch((unit == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit)
+      switch ((unit == Unit::automatic) ? Backend::appropriate_unit(nanoseconds) : unit)
       {
         case Unit::ns:
           Global::out << asset << nanoseconds << " ns" << std::endl;
@@ -301,7 +304,7 @@ namespace Chronometro
     {
       Stopwatch<C> stopwatch;
 
-      for (size_t iteration = 0; iteration < repetitions; ++iteration)
+      for (size_t iteration = repetitions; iteration; --iteration)
       {
         function(arguments...);
       }
@@ -310,17 +313,19 @@ namespace Chronometro
     }
 
     #undef  CHRONOMETRO_EXECUTION_TIME
-    #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)           \
-      [&](void) -> Chronometro::high_resolution_clock::duration              \
-      {                                                                      \
-        const size_t repet_itions = repetitions;                             \
-        Chronometro::Stopwatch<> stopw_atch;                                 \
-        for (size_t itera_tion = 0; itera_tion < repet_itions; ++itera_tion) \
-        {                                                                    \
-          function(__VA_ARGS__);                                             \
-        }                                                                    \
-        return stopw_atch.split();                                           \
+    #define CHRONOMETRO_EXECUTION_TIME(function, repetitions, ...)      \
+      [&]() -> Chronometro::high_resolution_clock::duration             \
+      {                                                                 \
+        Chronometro::Stopwatch<> stopw_atch;                            \
+        for (size_t itera_tion = repetitions; itera_tion; --itera_tion) \
+        {                                                               \
+          function(__VA_ARGS__);                                        \
+        }                                                               \
+        return stopw_atch.split();                                      \
       }()
+
+    #undef  CHRONOMETRO_REPEAT
+    #define CHRONOMETRO_REPEAT(n_times) for (size_t n_tim_es = n_times; n_tim_es--;)
   }
 // --Chronometro library : backend definitions-----------------------------------------------------
   namespace Backend

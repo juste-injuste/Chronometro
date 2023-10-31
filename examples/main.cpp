@@ -5,9 +5,8 @@
 // scuffed sleep function to demonstrate the basic usage of the library
 void sleep_for_ms(std::chrono::high_resolution_clock::rep ms)
 {
-  using namespace std::chrono;
-  auto start = high_resolution_clock::now();
-  while(nanoseconds(high_resolution_clock::now()-start).count() < ms*1000000);
+  std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+  while (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now()-start).count() < ms*1000000);
 }
 
 void stopwatch_tests()
@@ -100,4 +99,15 @@ int main()
   std::cout << "running CHRONOMETRO_EXECUTION_TIME tests...\n";
   macro_tests();
   std::cout << "CHRONOMETRO_EXECUTION_TIME tests done, see \"macro_tests.txt\" for the output\n\n";
+
+  // prints "hello world\n" 3 times
+  CHRONOMETRO_REPEAT(3)
+    std::cout << "hello world\n";
+
+  // prints "byebye world\n" 5 times
+  CHRONOMETRO_REPEAT(5)
+  {
+    std::cout << "byebye ";
+    std::cout << "world\n";
+  }
 }

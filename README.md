@@ -161,13 +161,48 @@ int main()
 
 _Limitations_:
 * The CHRONOMETRO_EXECUTION_TIME does not allow to specify a clock; `std::chrono::high_resolution_clock` is used.
-* You may not use the CHRONOMETRO_EXECUTION_TIME macro with variables named `stopw_atch`, `itera_tion` or `repet_itions`; otherwise name collision occurs leading to undefined behavior.
+* You may not use the CHRONOMETRO_EXECUTION_TIME macro with variables named `stopw_atch` or `itera_tion`; otherwise name collision occurs leading to undefined behavior.
+
+---
+
+### CHRONOMETRO_REPEAT
+
+```
+CHRONOMETRO_REPEAT(n_times)
+```
+The CHRONOMETRO_REPEAT repeats the following statement or block n times.
+
+_Arguments_:
+* `n_times` is the amount of times it will repeat the statement or block.
+
+_Example_:
+```cpp
+#include "Chronometro.hpp"
+extern void print(const char*);
+
+int main()
+{
+  // prints "hello world\n" 3 times
+  CHRONOMETRO_REPEAT(3)
+    print("hello world\n");
+
+  // prints "byebye world\n" 5 times
+  CHRONOMETRO_REPEAT(5)
+  {
+    print("byebye ");
+    print("world\n");
+  }
+}
+```
+
+_Limitations_:
+* You may not use the CHRONOMETRO_REPEAT macro with a variable named `n_tim_es`; otherwise name collision occurs leading to undefined behavior.
 
 ---
 
 ## Streams
 
-Chronometro outputs these following `std::ostream`s (defined in the `Global` namespace):
+Chronometro outputs these following `std::ostream`s (defined in the `Chronometro::Global` namespace):
 * `out` elapsed times go through here (linked to `std::cout` by default).
 * `err` errors go through here (linked to `std::cerr` by default).
 * `wrn` warnings go through here (linked to `std::cerr` by default).
