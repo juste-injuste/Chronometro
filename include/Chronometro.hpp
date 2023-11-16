@@ -126,7 +126,7 @@ namespace Chronometro
   }
 // --Chronometro library: frontend definitions--------------------------------------------------------------------------
 # undef  CHRONOMETRO_MEASURE
-# define CHRONOMETRO_MEASURE(...) for (Chronometro::Measure wo_r_k{__VA_ARGS__}; wo_r_k; ++wo_r_k)
+# define CHRONOMETRO_MEASURE(...) for (Chronometro::Measure measurement{__VA_ARGS__}; measurement; ++measurement)
 
   Time Stopwatch::lap() noexcept
   {
