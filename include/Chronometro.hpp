@@ -363,6 +363,20 @@ namespace Chronometro
       
       return format.c_str();
     }
+
+#   define CHRONOMETRO_ONLY_EVERY_MS(n)                               \
+      if ([]{                                                         \
+        static_assert(n > 0, "n must be a non-zero positive number"); \
+        using clock = std::chrono::high_resolution_clock;             \
+        static clock::time_point previous = {};                       \
+        auto target = std::chrono::nanoseconds{n*1000000};            \
+        if ((clock::now() - previous) > target)                       \
+        {                                                             \
+          previous = clock::now();                                    \
+          return true;                                                \
+        }                                                             \
+        return false;                                                 \
+      }())
   }
 }
 #endif
