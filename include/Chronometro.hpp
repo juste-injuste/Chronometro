@@ -92,7 +92,10 @@ namespace Chronometro
   class Measure final
   {
   public:
-    inline Measure(size_t n = 1, const char* format = nullptr) noexcept;
+    inline Measure() noexcept = default;
+    inline Measure(size_t n) noexcept;
+    inline Measure(size_t n, const char* lap_format) noexcept;
+    inline Measure(size_t n, const char* lap_format, const char* total_format) noexcept;
     inline size_t operator*() noexcept;
     inline void operator++() noexcept;
     inline bool operator!=(const Measure&) noexcept;
@@ -100,10 +103,11 @@ namespace Chronometro
     inline Measure& begin() noexcept;
     inline Measure end() noexcept;
   private:
-    const size_t iterations;
-    size_t       iterations_left;
     Stopwatch    stopwatch;
-    const char*  lap_format;
+    const size_t iterations      = 1;
+    size_t       iterations_left = iterations;
+    const char*  lap_format      = nullptr;
+    const char*  total_format    = "total elapsed time: %ms";
   };
 
   namespace Global
@@ -116,7 +120,7 @@ namespace Chronometro
 // --Chronometro library: backend forward declaration-------------------------------------------------------------------
   namespace Backend
   {
-    const char* format_string(const Time time, std::string format, const size_t iteration = 0) noexcept;
+    std::string format_string(const Time time, std::string format, const size_t iteration = 0) noexcept;
 
 # if defined(CHRONOMETRO_NO_WARNINGS)
 #   define CHRONOMETRO_SW_WARNING(message) {} /* warnings are disabled do not #define CHRONOMETRO_NO_WARNINGS to enable them */
@@ -220,10 +224,19 @@ namespace Chronometro
     else CHRONOMETRO_SW_WARNING("is already unpaused");
   }
   
-  Measure::Measure(size_t n, const char* format) noexcept :
+  Measure::Measure(size_t n) noexcept :
+    iterations(n)
+  {}
+  
+  Measure::Measure(size_t n, const char* lap_format) noexcept :
     iterations(n),
-    iterations_left(n),
-    lap_format{format}
+    lap_format{lap_format}
+  {}
+  
+  Measure::Measure(size_t n, const char* lap_format, const char* total_format) noexcept :
+    iterations(n),
+    lap_format{lap_format},
+    total_format{total_format}
   {}
   
   size_t Measure::operator*() noexcept
@@ -249,7 +262,7 @@ namespace Chronometro
 
   bool Measure::operator!=(const Measure&) noexcept
   {
-    return bool(*this);
+    return operator bool();
   }
 
   Measure::operator bool() noexcept
@@ -258,8 +271,13 @@ namespace Chronometro
     {
       return true;
     }
-    
-    Global::out << Backend::format_string(stopwatch.split(), "elapsed time: %ms") << std::endl;
+
+    Time time = stopwatch.split();
+    if (total_format)
+    {
+      Global::out << Backend::format_string(time, total_format) << std::endl;
+    }
+
     return false;
   }
 
@@ -311,7 +329,7 @@ namespace Chronometro
 // --Chronometro library: backend definitions---------------------------------------------------------------------------
   namespace Backend
   {
-    const char* format_string(const Time time, std::string format, const size_t iteration) noexcept
+    std::string format_string(const Time time, std::string format, const size_t iteration) noexcept
     {
       size_t iteration_position = format.find("%#");
       if (iteration_position != std::string::npos)
@@ -323,45 +341,39 @@ namespace Chronometro
       if (time_position != std::string::npos)
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000) + ' ');
-        return format.c_str();
       }
 
       time_position = format.rfind("%us");
       if (time_position != std::string::npos)
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/1000) + ' ');
-        return format.c_str();
       }
 
       time_position = format.rfind("%ns");
       if (time_position != std::string::npos)
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds) + ' ');
-        return format.c_str();
       }
 
       time_position = format.rfind("%s");
       if (time_position != std::string::npos)
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000000) + ' ');
-        return format.c_str();
       }
 
       time_position = format.rfind("%min");
       if (time_position != std::string::npos)
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/60000000) + ' ');
-        return format.c_str();
       }
 
       time_position = format.rfind("%h");
       if (time_position != std::string::npos)
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/3600000000) + ' ');
-        return format.c_str();
       }
       
-      return format.c_str();
+      return format;
     }
 
 #   define CHRONOMETRO_ONLY_EVERY_MS(n)                               \
