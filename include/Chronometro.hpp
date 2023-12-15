@@ -246,22 +246,22 @@ namespace Chronometro
     // measure current time
     const auto now = Clock::now();
 
-    std::chrono::nanoseconds::rep ns = duration_lap.count();
+    std::chrono::nanoseconds::rep nanoseconds = duration_lap.count();
 
     if (is_paused == false) CHRONOMETRO_HOT
     {
       // save elapsed times
       duration += now - previous;
-      ns       += (now - previous_lap).count();
+      nanoseconds       += (now - previous_lap).count();
       
       // reset measured time
       duration_lap = Clock::duration{};
       previous     = Clock::now();
       previous_lap = previous;
     }
-    else CHRONOMETRO_WARNING("cannot measure lap, must not be paused");
+    else CHRONOMETRO_WARNING("cannot be measured, must not be paused");
 
-    return Time{ns};
+    return Time{nanoseconds};
   }
 
   Time Stopwatch::split() noexcept
@@ -269,7 +269,7 @@ namespace Chronometro
     // measure current time
     const auto now = Clock::now();
 
-    std::chrono::nanoseconds::rep ns = duration.count();
+    std::chrono::nanoseconds::rep nanoseconds = duration.count();
 
     if (is_paused == false) CHRONOMETRO_HOT
     {
@@ -277,15 +277,15 @@ namespace Chronometro
       duration     += now - previous;
       duration_lap += now - previous_lap;
       
-      ns = duration.count();
+      nanoseconds = duration.count();
 
       // save time point
       previous     = Clock::now();
       previous_lap = previous;
     }
-    else CHRONOMETRO_WARNING("cannot measure split, must not be paused");
+    else CHRONOMETRO_WARNING("cannot be measured, must not be paused");
     
-    return Time{ns};
+    return Time{nanoseconds};
   }
 
   void Stopwatch::pause() noexcept
@@ -302,7 +302,7 @@ namespace Chronometro
       duration     += now - previous;
       duration_lap += now - previous_lap;
     }
-    else CHRONOMETRO_WARNING("cannot pause further, is already paused");
+    else CHRONOMETRO_WARNING("cannot be paused further, is already paused");
   }
 
   void Stopwatch::reset() noexcept
