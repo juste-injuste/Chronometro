@@ -66,4 +66,6 @@ int main()
     std::cout << "currently doing iteration #" << iteration << '\n';
     sleep_for_ms(100);
   }
+
+  stopwatch.split();
 }

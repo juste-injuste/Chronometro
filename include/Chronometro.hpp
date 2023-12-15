@@ -86,59 +86,9 @@ namespace Chronometro
   };
 
   // measure elapsed time
-  class Stopwatch final
-  {
-  public:
-    inline // display and return lap time
-    Time lap()     noexcept;
-    
-    inline // display and return split time
-    Time split()   noexcept;
+  class Stopwatch;
 
-    inline // pause time measurement
-    void pause()   noexcept;
-
-    inline // reset measured times
-    void reset()   noexcept;
-
-    inline // unpause time measurement
-    void unpause() noexcept;
-  private:
-    bool              is_paused    = false;
-    Clock::duration   duration     = {};
-    Clock::duration   duration_lap = {};
-    Clock::time_point previous     = Clock::now();
-    Clock::time_point previous_lap = previous;
-  };
-
-  class Measure final
-  {
-  public:
-    // measure 1 iteration
-    Measure() noexcept = default;
-    
-    inline // measure N iterations
-    Measure(unsigned N) noexcept;
-
-    inline // measure N iterations with iteration message
-    Measure(unsigned N, const char* lap_format) noexcept;
-
-    inline // measure N iterations with iteration message and custom total message
-    Measure(unsigned N, const char* lap_format, const char* total_format) noexcept;
-  private:
-    Stopwatch      stopwatch;
-    const unsigned iterations      = 1;
-    unsigned       iterations_left = iterations;
-    const char*    lap_format      = nullptr;
-    const char*    total_format    = "total elapsed time: %ms";
-  public: // iterator stuff
-    inline auto begin()                    noexcept -> Measure&;
-    inline auto end()                const noexcept -> Measure;
-    inline auto operator*()          const noexcept -> unsigned;
-    inline void operator++()               noexcept;
-    inline bool operator!=(const Measure&) noexcept;
-    inline      operator bool()            noexcept;
-  };
+  class Measure;
 
   // execute following statement/block only if its last execution was atleast N milliseconds prior
 # define CHRONOMETRO_ONLY_EVERY_MS(N)
@@ -154,7 +104,7 @@ namespace Chronometro
 //---Chronometro library: backend---------------------------------------------------------------------------------------
   namespace _backend
   {
-# if defined(__GNUC__) and (__GNUC__ >= 9)
+# if defined(__GNUC__) and (__GNUC__ >= 10)
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
 # elif defined(__clang__) and (__clang_major__ >= 12)
@@ -163,6 +113,14 @@ namespace Chronometro
 # else
 #   define CHRONOMETRO_HOT
 #   define CHRONOMETRO_COLD
+# endif
+
+# if defined(__GNUC__) and (__GNUC__ >= 7)
+#   define CHRONOMETRO_NODISCARD [[nodiscard]]
+# elif defined(__clang__) and ((__clang_major__ > 3) or ((__clang_major__ == 3) and (__clang_minor__ >= 9)))
+#   define CHRONOMETRO_NODISCARD [[nodiscard]]
+# else
+#   define CHRONOMETRO_NODISCARD
 # endif
 
 # if defined(CHRONOMETRO_WARNINGS)
@@ -238,6 +196,62 @@ namespace Chronometro
     }
   }
 //---Chronometro library: frontend definitions--------------------------------------------------------------------------
+  class Stopwatch final
+  {
+  public:
+    CHRONOMETRO_NODISCARD
+    inline // display and return lap time
+    Time lap()     noexcept;
+    
+    CHRONOMETRO_NODISCARD
+    inline // display and return split time
+    Time split()   noexcept;
+
+    inline // pause time measurement
+    void pause()   noexcept;
+
+    inline // reset measured times
+    void reset()   noexcept;
+
+    inline // unpause time measurement
+    void unpause() noexcept;
+  private:
+    bool              is_paused    = false;
+    Clock::duration   duration     = {};
+    Clock::duration   duration_lap = {};
+    Clock::time_point previous     = Clock::now();
+    Clock::time_point previous_lap = previous;
+  };
+
+  class Measure final
+  {
+  public:
+    // measure 1 iteration
+    Measure() noexcept = default;
+    
+    inline // measure N iterations
+    Measure(unsigned N) noexcept;
+
+    inline // measure N iterations with iteration message
+    Measure(unsigned N, const char* lap_format) noexcept;
+
+    inline // measure N iterations with iteration message and custom total message
+    Measure(unsigned N, const char* lap_format, const char* total_format) noexcept;
+  private:
+    Stopwatch      stopwatch;
+    const unsigned iterations      = 1;
+    unsigned       iterations_left = iterations;
+    const char*    lap_format      = nullptr;
+    const char*    total_format    = "total elapsed time: %ms";
+  public: // iterator stuff
+    inline auto begin()                    noexcept -> Measure&;
+    inline auto end()                const noexcept -> Measure;
+    inline auto operator*()          const noexcept -> unsigned;
+    inline void operator++()               noexcept;
+    inline bool operator!=(const Measure&) noexcept;
+    inline      operator bool()            noexcept;
+  };
+
 # undef  CHRONOMETRO_MEASURE
 # define CHRONOMETRO_MEASURE(...) for (Chronometro::Measure measurement{__VA_ARGS__}; measurement; ++measurement)
 

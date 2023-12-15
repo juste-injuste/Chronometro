@@ -251,6 +251,12 @@ Chronometro is a header-only library. To use it in your C++ project, simply `#in
 
 ---
 
+## Compiler support
+
+* `GCC` >= 4.7.3
+
+---
+
 ## License
 
 Chronometro is released under the MIT License. See the [LICENSE](LICENSE) file for more details.
