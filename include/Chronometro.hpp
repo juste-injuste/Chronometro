@@ -40,12 +40,12 @@ execution time of functions or code blocks. See the included README.MD file for 
 -----inclusion guard--------------------------------------------------------------------------------------------------*/
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
-// --necessary standard libraries---------------------------------------------------------------------------------------
+//---necessary standard libraries---------------------------------------------------------------------------------------
 #include <chrono>       // for std::chrono::high_resolution_clock and std::chrono::nanoseconds
 #include <ostream>      // for std::ostream
 #include <iostream>     // for std::cout, std::clog, std::endl
 #include <string>       // for std::string
-// --supplementary standard libraries-----------------------------------------------------------------------------------
+//---supplementary standard libraries-----------------------------------------------------------------------------------
 #if not defined(CHRONOMETRO_CLOCK)
 # include <type_traits> // for std::conditional
 #endif
@@ -55,7 +55,7 @@ execution time of functions or code blocks. See the included README.MD file for 
 #endif
 # include <cstdio>      // for std::sprintf
 #endif
-// --Chronometro library------------------------------------------------------------------------------------------------
+//---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
 {
   namespace Version
@@ -151,13 +151,13 @@ namespace Chronometro
     std::ostream out{std::cout.rdbuf()}; // output ostream
     std::ostream wrn{std::clog.rdbuf()}; // warning ostream
   }
-// --Chronometro library: backend forward declaration-------------------------------------------------------------------
+//---Chronometro library: backend---------------------------------------------------------------------------------------
   namespace _backend
   {
 # if defined(__GNUC__) and (__GNUC__ >= 9)
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
-# elif defined(__clang__) and (__clang_major__ >= 9)
+# elif defined(__clang__) and (__clang_major__ >= 12)
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
 # else
@@ -237,7 +237,7 @@ namespace Chronometro
       return _format_string(time, format);
     }
   }
-// --Chronometro library: frontend definitions--------------------------------------------------------------------------
+//---Chronometro library: frontend definitions--------------------------------------------------------------------------
 # undef  CHRONOMETRO_MEASURE
 # define CHRONOMETRO_MEASURE(...) for (Chronometro::Measure measurement{__VA_ARGS__}; measurement; ++measurement)
 
@@ -404,11 +404,11 @@ namespace Chronometro
 # define CHRONOMETRO_ONLY_EVERY_MS(N)                               \
     if ([]{                                                         \
       static_assert(N > 0, "N must be a non-zero positive number"); \
-      static Clock::time_point previous = {};                       \
+      static Chronometro::Clock::time_point previous = {};          \
       auto target = std::chrono::nanoseconds{N*1000000};            \
-      if ((Clock::now() - previous) > target)                       \
+      if ((Chronometro::Clock::now() - previous) > target)          \
       {                                                             \
-        previous = Clock::now();                                    \
+        previous = Chronometro::Clock::now();                       \
         return true;                                                \
       }                                                             \
       return false;                                                 \
