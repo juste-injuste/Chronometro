@@ -104,45 +104,36 @@ namespace Chronometro
   class Measure final
   {
   public:
+    // measure 1 iteration
     Measure() noexcept = default;
     
-    inline
-    Measure(unsigned n) noexcept;
+    inline // measure N iterations
+    Measure(unsigned N) noexcept;
 
-    inline
-    Measure(unsigned n, const char* lap_format) noexcept;
+    inline // measure N iterations with iteration message
+    Measure(unsigned N, const char* lap_format) noexcept;
 
-    inline
-    Measure(unsigned n, const char* lap_format, const char* total_format) noexcept;
-
-    inline
-    unsigned operator*() noexcept;
-    
-    inline
-    void operator++() noexcept;
-    
-    inline
-    bool operator!=(const Measure&) noexcept;
-    
-    inline
-    operator bool() noexcept;
-    
-    inline
-    Measure& begin() noexcept;
-    
-    inline
-    Measure end() noexcept;
+    inline // measure N iterations with iteration message and custom total message
+    Measure(unsigned N, const char* lap_format, const char* total_format) noexcept;
   private:
     Stopwatch      stopwatch;
     const unsigned iterations      = 1;
     unsigned       iterations_left = iterations;
     const char*    lap_format      = nullptr;
     const char*    total_format    = "total elapsed time: %ms";
+  public: // iterator stuff
+    inline auto begin()                    noexcept -> Measure&;
+    inline auto end()                const noexcept -> Measure;
+    inline auto operator*()          const noexcept -> unsigned;
+    inline void operator++()               noexcept;
+    inline bool operator!=(const Measure&) noexcept;
+    inline      operator bool()            noexcept;
   };
 
   // execute following statement/block only if its last execution was atleast N milliseconds prior
 # define CHRONOMETRO_ONLY_EVERY_MS(N)
 
+  // print time to ostream
   std::ostream& operator<<(std::ostream& ostream, const Time time) noexcept;
 
   namespace Global
@@ -206,7 +197,7 @@ namespace Chronometro
     }
 
 # if defined(CHRONOMETRO_NO_WARNINGS)
-#   define CHRONOMETRO_SW_WARNING(message) void(0) /* warnings are disabled do not #define CHRONOMETRO_NO_WARNINGS to enable them */
+#   define CHRONOMETRO_SW_WARNING(message) void(0)
 # else
 #   define CHRONOMETRO_SW_WARNING(message) Global::wrn << "warning: Stopwatch::" << __func__ << "(): " << message << std::endl
 # endif
@@ -306,23 +297,33 @@ namespace Chronometro
     }
     else CHRONOMETRO_SW_WARNING("is already unpaused");
   }
+
+  Measure& Measure::begin() noexcept
+  {
+    return *this;
+  }
+
+  Measure Measure::end() const noexcept
+  {
+    return Measure{0};
+  }
   
-  Measure::Measure(unsigned n) noexcept :
-    iterations(n)
+  Measure::Measure(unsigned N) noexcept :
+    iterations(N)
   {}
   
-  Measure::Measure(unsigned n, const char* lap_format) noexcept :
-    iterations(n),
-    lap_format{lap_format}
+  Measure::Measure(unsigned N, const char* lap_format) noexcept :
+    iterations(N),
+    lap_format(lap_format)
   {}
   
-  Measure::Measure(unsigned n, const char* lap_format, const char* total_format) noexcept :
-    iterations(n),
-    lap_format{lap_format},
-    total_format{total_format}
+  Measure::Measure(unsigned N, const char* lap_format, const char* total_format) noexcept :
+    iterations(N),
+    lap_format(lap_format),
+    total_format(total_format)
   {}
   
-  unsigned Measure::operator*() noexcept
+  unsigned Measure::operator*() const noexcept
   {
     return iterations - iterations_left;
   }
@@ -333,7 +334,7 @@ namespace Chronometro
     
     stopwatch.pause();
 
-    if (lap_format)
+    if ((lap_format != nullptr) && (lap_format[0] != '\0'))
     {
       Global::out << _backend::_format_string(lap_time, lap_format, iterations - iterations_left) << std::endl;
     }
@@ -362,16 +363,6 @@ namespace Chronometro
     }
 
     return false;
-  }
-
-  Measure& Measure::begin() noexcept
-  {
-    return *this;
-  }
-
-  Measure Measure::end() noexcept
-  {
-    return Measure{0};
   }
 
 # undef  CHRONOMETRO_ONLY_EVERY_MS
