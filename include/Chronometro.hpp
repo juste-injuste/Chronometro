@@ -41,11 +41,20 @@ execution time of functions or code blocks. See the included README.MD file for 
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
 // --necessary standard libraries---------------------------------------------------------------------------------------
-#include <chrono>      // for std::chrono::high_resolution_clock and std::chrono::nanoseconds
-#include <ostream>     // for std::ostream
-#include <iostream>    // for std::cout, std::cerr, std::endl
-#include <string>      // for std::string
-#include <type_traits> // for std::conditional
+#include <chrono>       // for std::chrono::high_resolution_clock and std::chrono::nanoseconds
+#include <ostream>      // for std::ostream
+#include <iostream>     // for std::cout, std::clog, std::endl
+#include <string>       // for std::string
+// --supplementary standard libraries-----------------------------------------------------------------------------------
+#if not defined(CHRONOMETRO_CLOCK)
+# include <type_traits> // for std::conditional
+#endif
+#if defined(CHRONOMETRO_WARNINGS)
+#if defined(__STDCPP_THREADS__)
+# include <mutex>       // for std::mutex, std::lock_guard
+#endif
+# include <cstdio>      // for std::sprintf
+#endif
 // --Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
 {
@@ -65,6 +74,7 @@ namespace Chronometro
     std::chrono::high_resolution_clock,
     std::chrono::steady_clock
   >::type;
+# define CHRONOMETRO_CLOCK Clock
 #endif
 
   // measures the time it takes to execute the following statement/block n times
@@ -139,45 +149,76 @@ namespace Chronometro
   namespace Global
   {
     std::ostream out{std::cout.rdbuf()}; // output ostream
-    std::ostream wrn{std::cerr.rdbuf()}; // warning ostream
+    std::ostream wrn{std::clog.rdbuf()}; // warning ostream
   }
 // --Chronometro library: backend forward declaration-------------------------------------------------------------------
   namespace _backend
   {
+# if defined(__GNUC__) and (__GNUC__ >= 9)
+#   define CHRONOMETRO_HOT  [[likely]]
+#   define CHRONOMETRO_COLD [[unlikely]]
+# elif defined(__clang__) and (__clang_major__ >= 9)
+#   define CHRONOMETRO_HOT  [[likely]]
+#   define CHRONOMETRO_COLD [[unlikely]]
+# else
+#   define CHRONOMETRO_HOT
+#   define CHRONOMETRO_COLD
+# endif
+
+# if defined(CHRONOMETRO_WARNINGS)
+    void _wrn(const char* caller, const char* message)
+    {
+#   if defined(__STDCPP_THREADS__)
+      static std::mutex mtx;
+      std::lock_guard<std::mutex> lock{mtx};
+#   endif
+      Global::wrn << caller << ": " << message << std::endl;
+    }
+    
+#   define CHRONOMETRO_WARNING(...)     \
+      [&](const char* caller){          \
+        static char buffer[256];        \
+        sprintf(buffer, __VA_ARGS__);   \
+        _backend::_wrn(caller, buffer); \
+      }(__func__)
+# else
+#   define CHRONOMETRO_WARNING(...) void(0)
+# endif
+
     std::string _format_string(const Time time, std::string format) noexcept
     {
       auto time_position = format.rfind("%ms");
-      if (time_position != std::string::npos)
+      if (time_position != std::string::npos) CHRONOMETRO_HOT
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000) + ' ');
       }
 
       time_position = format.rfind("%us");
-      if (time_position != std::string::npos)
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/1000) + ' ');
       }
 
       time_position = format.rfind("%ns");
-      if (time_position != std::string::npos)
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds) + ' ');
       }
 
       time_position = format.rfind("%s");
-      if (time_position != std::string::npos)
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000000) + ' ');
       }
 
       time_position = format.rfind("%min");
-      if (time_position != std::string::npos)
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/60000000) + ' ');
       }
 
       time_position = format.rfind("%h");
-      if (time_position != std::string::npos)
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/3600000000) + ' ');
       }
@@ -195,12 +236,6 @@ namespace Chronometro
       
       return _format_string(time, format);
     }
-
-# if defined(CHRONOMETRO_NO_WARNINGS)
-#   define CHRONOMETRO_SW_WARNING(message) void(0)
-# else
-#   define CHRONOMETRO_SW_WARNING(message) Global::wrn << "warning: Stopwatch::" << __func__ << "(): " << message << std::endl
-# endif
   }
 // --Chronometro library: frontend definitions--------------------------------------------------------------------------
 # undef  CHRONOMETRO_MEASURE
@@ -213,7 +248,7 @@ namespace Chronometro
 
     std::chrono::nanoseconds::rep ns = duration_lap.count();
 
-    if (is_paused == false)
+    if (is_paused == false) CHRONOMETRO_HOT
     {
       // save elapsed times
       duration += now - previous;
@@ -224,7 +259,7 @@ namespace Chronometro
       previous     = Clock::now();
       previous_lap = previous;
     }
-    else CHRONOMETRO_SW_WARNING("cannot measure lap, must not be paused");
+    else CHRONOMETRO_WARNING("cannot measure lap, must not be paused");
 
     return Time{ns};
   }
@@ -236,7 +271,7 @@ namespace Chronometro
 
     std::chrono::nanoseconds::rep ns = duration.count();
 
-    if (is_paused == false)
+    if (is_paused == false) CHRONOMETRO_HOT
     {
       // save elapsed times
       duration     += now - previous;
@@ -248,7 +283,7 @@ namespace Chronometro
       previous     = Clock::now();
       previous_lap = previous;
     }
-    else CHRONOMETRO_SW_WARNING("cannot measure split, must not be paused");
+    else CHRONOMETRO_WARNING("cannot measure split, must not be paused");
     
     return Time{ns};
   }
@@ -259,7 +294,7 @@ namespace Chronometro
     const auto now = Clock::now();
 
     // add elapsed time up to now if not paused
-    if (is_paused == false)
+    if (is_paused == false) CHRONOMETRO_HOT
     {
       is_paused = true;
 
@@ -267,7 +302,7 @@ namespace Chronometro
       duration     += now - previous;
       duration_lap += now - previous_lap;
     }
-    else CHRONOMETRO_SW_WARNING("cannot pause further, is already paused");
+    else CHRONOMETRO_WARNING("cannot pause further, is already paused");
   }
 
   void Stopwatch::reset() noexcept
@@ -286,7 +321,7 @@ namespace Chronometro
 
   void Stopwatch::unpause() noexcept
   {
-    if (is_paused == true)
+    if (is_paused == true) CHRONOMETRO_HOT
     {
       // unpause
       is_paused = false;
@@ -295,7 +330,7 @@ namespace Chronometro
       previous     = Clock::now();
       previous_lap = previous;
     }
-    else CHRONOMETRO_SW_WARNING("is already unpaused");
+    else CHRONOMETRO_WARNING("is already unpaused");
   }
 
   Measure& Measure::begin() noexcept
@@ -351,13 +386,13 @@ namespace Chronometro
 
   Measure::operator bool() noexcept
   {     
-    if (iterations_left)
+    if (iterations_left) CHRONOMETRO_HOT
     {
       return true;
     }
 
     Time time = stopwatch.split();
-    if (total_format)
+    if (total_format) CHRONOMETRO_HOT
     {
       Global::out << _backend::_format_string(time, total_format) << std::endl;
     }
@@ -368,9 +403,9 @@ namespace Chronometro
 # undef  CHRONOMETRO_ONLY_EVERY_MS
 # define CHRONOMETRO_ONLY_EVERY_MS(N)                               \
     if ([]{                                                         \
-      static_assert(n > 0, "n must be a non-zero positive number"); \
+      static_assert(N > 0, "N must be a non-zero positive number"); \
       static Clock::time_point previous = {};                       \
-      auto target = std::chrono::nanoseconds{n*1000000};            \
+      auto target = std::chrono::nanoseconds{N*1000000};            \
       if ((Clock::now() - previous) > target)                       \
       {                                                             \
         previous = Clock::now();                                    \
@@ -382,31 +417,31 @@ namespace Chronometro
   std::ostream& operator<<(std::ostream& ostream, const Time time) noexcept
   {
     // 10 h < duration
-    if (time.nanoseconds > 36000000000000)
+    if (time.nanoseconds > 36000000000000) CHRONOMETRO_COLD
     {
       return ostream << _backend::_format_string(time, "elapsed time: %h") << std::endl;
     }
 
     // 10 min < duration <= 10 h
-    if (time.nanoseconds > 600000000000)
+    if (time.nanoseconds > 600000000000) CHRONOMETRO_COLD
     {
       return ostream << _backend::_format_string(time, "elapsed time: %min") << std::endl;
     }
 
     // 10 s < duration <= 10 m
-    if (time.nanoseconds > 10000000000)
+    if (time.nanoseconds > 10000000000) CHRONOMETRO_COLD
     {
       return ostream << _backend::_format_string(time, "elapsed time: %s") << std::endl;
     }
 
     // 10 ms < duration <= 10 s
-    if (time.nanoseconds > 10000000)
+    if (time.nanoseconds > 10000000) CHRONOMETRO_HOT
     {
       return ostream << _backend::_format_string(time, "elapsed time: %ms") << std::endl;
     }
 
     // 10 us < duration <= 10 ms
-    if (time.nanoseconds > 10000)
+    if (time.nanoseconds > 10000) CHRONOMETRO_COLD
     {
       return ostream << _backend::_format_string(time, "elapsed time: %us") << std::endl;
     }
@@ -414,5 +449,6 @@ namespace Chronometro
     // duration <= 10 us
     return ostream << _backend::_format_string(time, "elapsed time: %ns") << std::endl;
   }
+# undef CHRONOMETRO_WARNING
 }
 #endif
