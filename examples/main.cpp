@@ -23,7 +23,7 @@ int main()
   std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
   sleep_for_ms(250);
-  std::cout << stopwatch.split(); // prints ~"elapsed time: 250 ms"
+  std::cout << stopwatch.split<Chronometro::Unit::ns>(); // prints ~"elapsed time: 250000000 ns"
   stopwatch.pause();
   std::cout << stopwatch.split(); // warning issued, prints ~"elapsed time: 250 ms"
 
@@ -66,6 +66,4 @@ int main()
     std::cout << "currently doing iteration #" << iteration << '\n';
     sleep_for_ms(100);
   }
-
-  stopwatch.split();
 }
