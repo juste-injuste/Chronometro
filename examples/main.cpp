@@ -3,7 +3,7 @@
 #include <iostream>
 
 // scuffed sleep function to demonstrate the basic usage of the library
-void sleep_for_ms(std::chrono::high_resolution_clock::rep ms)
+inline void sleep_for_ms(std::chrono::high_resolution_clock::rep ms)
 {
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
   while (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now()-start).count() < ms*1000000);
@@ -50,18 +50,21 @@ int main()
   std::cout << '\n';
   CHRONOMETRO_MEASURE(1, nullptr, "should take 800 ms, took %ms")
   {
-    unsigned count = 0;
-    while (count < 5)
+    unsigned count1 = 0, count2 = 0;
+    while (count1 < 5)
     {
       CHRONOMETRO_ONLY_EVERY_MS(200) // first execution does not wait 500 ms
       {
         std::cout << "incrementing...\n";
-        ++count;
+        ++count1;
       }
+      ++count2;
     }
+    std::cout << "while loop executions: " << count2 << '\n';
   }
 
-  for (auto iteration : Chronometro::Measure(4, "", "iterations took %ms"))
+  std::cout << '\n';
+  for (auto iteration : Chronometro::Measure(4, "iteration %# took %ms", "iterations took %ms"))
   {
     std::cout << "currently doing iteration #" << iteration << '\n';
     sleep_for_ms(100);
