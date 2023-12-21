@@ -393,7 +393,7 @@ namespace Chronometro
 
   Measure Measure::end() const noexcept
   {
-    return Measure{0};
+    return Measure(0);
   }
   
   Measure::Measure(unsigned N) noexcept :
