@@ -45,6 +45,7 @@ execution time of functions or code blocks. See the included README.MD file for 
 #include <ostream>      // for std::ostream
 #include <iostream>     // for std::cout, std::clog, std::endl
 #include <string>       // for std::string
+#include <utility>      // for std::move
 //---supplementary standard libraries-----------------------------------------------------------------------------------
 #if not defined(CHRONOMETRO_CLOCK)
 # include <type_traits> // for std::conditional
@@ -67,6 +68,7 @@ namespace Chronometro
     constexpr long NUMBER = (MAJOR * 1000 + MINOR) * 1000 + PATCH;
   }
   
+  // clock used to measure time
 #if defined(CHRONOMETRO_CLOCK) 
   using Clock = CHRONOMETRO_CLOCK;
 #else
@@ -78,18 +80,19 @@ namespace Chronometro
 # define CHRONOMETRO_CLOCK Clock
 #endif
 
-  // measures the time it takes to execute the following statement/block n times
+  // measures the time it takes to execute the following statement/block n times, with labels
 # define CHRONOMETRO_MEASURE(...)
 
+  // units in which Time<> can be displayed
   enum class Unit
   {
-    ns,
-    us,
-    ms,
-    s,
-    min,
-    h,
-    automatic
+    ns,       // nanoseconds
+    us,       // microseconds
+    ms,       // milliseconds
+    s,        // seconds
+    min,      // minutes
+    h,        // hours
+    automatic // deduce appropriate unit automatically
   };
 
   // measure elapsed time
@@ -99,6 +102,7 @@ namespace Chronometro
   template<Unit U>
   struct Time;
 
+  // measure iterations via range-based for-loop
   class Measure;
 
   // execute following statement/blocks only if its last execution was atleast N milliseconds prior
@@ -145,11 +149,11 @@ namespace Chronometro
 
 # if defined(CHRONOMETRO_WARNINGS)
 # if defined (CHRONOMETRO_THREADSAFE)
-    static thread_local char _wrn_buffer[256];
-    static std::mutex _wrn_mtx;
+    thread_local char _wrn_buffer[256];
+    std::mutex _wrn_mtx;
 #   define CHRONOMETRO_WRN_LOCK std::lock_guard<std::mutex> lock{_backend::_wrn_mtx}
 # else
-    static char _log_buffer[256];
+    char _log_buffer[256];
 #   define CHRONOMETRO_WRN_LOCK
 # endif
     
@@ -165,12 +169,60 @@ namespace Chronometro
 # endif
 
     template<Unit U>
-    std::string _format(Time<U> time, std::string format) noexcept;
+    std::string _format(Time<U> time, std::string&& format) noexcept
+    {
+      auto time_position = format.rfind("%ms");
+      if (time_position != std::string::npos) CHRONOMETRO_HOT
+      {
+        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000) + ' ');
+      }
+
+      time_position = format.rfind("%us");
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000) + ' ');
+      }
+
+      time_position = format.rfind("%ns");
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(time_position, 1, std::to_string(time.nanoseconds) + ' ');
+      }
+
+      time_position = format.rfind("%s");
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000000) + ' ');
+      }
+
+      time_position = format.rfind("%min");
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(time_position, 1, std::to_string(time.nanoseconds/60000000000) + ' ');
+      }
+
+      time_position = format.rfind("%h");
+      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(time_position, 1, std::to_string(time.nanoseconds/3600000000000) + ' ');
+      }
+      
+      return std::move(format);
+    }
 
     template<Unit U>
-    std::string _format(Time<U> time, std::string format, const unsigned iteration) noexcept;
+    std::string _format(Time<U> time, std::string&& format, const unsigned iteration) noexcept
+    {
+      auto iteration_position = format.find("%#");
+      if (iteration_position != std::string::npos)
+      {
+        format.replace(iteration_position, 2, std::to_string(iteration));
+      }
+      
+      return _format(time, std::move(format));
+    }
   }
-//---Chronometro library: frontend definitions--------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
   class Stopwatch final
   {
   public:
@@ -193,11 +245,11 @@ namespace Chronometro
     inline // unpause time measurement
     void unpause() noexcept;
   private:
-    bool              is_paused    = false;
-    Clock::duration   duration     = {};
-    Clock::duration   duration_lap = {};
-    Clock::time_point previous     = Clock::now();
-    Clock::time_point previous_lap = previous;
+    bool                     is_paused    = false;
+    std::chrono::nanoseconds duration     = {};
+    std::chrono::nanoseconds duration_lap = {};
+    Clock::time_point        previous     = Clock::now();
+    Clock::time_point        previous_lap = previous;
   };
   
   template<Unit U>
@@ -276,7 +328,7 @@ namespace Chronometro
       duration     += now - previous;
       duration_lap += now - previous_lap;
       
-      nanoseconds = duration.count();
+      nanoseconds   = duration.count();
 
       // save time point
       previous     = Clock::now();
@@ -334,6 +386,8 @@ namespace Chronometro
 
   Measure& Measure::begin() noexcept
   {
+    iterations_left = iterations;
+    stopwatch.reset();
     return *this;
   }
 
@@ -453,13 +507,13 @@ namespace Chronometro
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::automatic> time) noexcept
   {
     // 10 h < duration
-    if (time.nanoseconds > 36000000000000)
+    if (time.nanoseconds > 36000000000000) CHRONOMETRO_COLD
     {
       return ostream << Time<Unit::h>{time.nanoseconds};
     }
 
     // 10 min < duration <= 10 h
-    if (time.nanoseconds > 600000000000)
+    if (time.nanoseconds > 600000000000) CHRONOMETRO_COLD
     {
       return ostream << Time<Unit::min>{time.nanoseconds};
     }
@@ -485,63 +539,14 @@ namespace Chronometro
     // duration <= 10 us
     return ostream << Time<Unit::ns>{time.nanoseconds};
   }
-//---Chronometro library: backend---------------------------------------------------------------------------------------
-  namespace _backend
-  {
-    template<Unit U>
-    std::string _format(Time<U> time, std::string format) noexcept
-    {
-      auto time_position = format.rfind("%ms");
-      if (time_position != std::string::npos) CHRONOMETRO_HOT
-      {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000) + ' ');
-      }
 
-      time_position = format.rfind("%us");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
-      {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000) + ' ');
-      }
-
-      time_position = format.rfind("%ns");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
-      {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds) + ' ');
-      }
-
-      time_position = format.rfind("%s");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
-      {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000000) + ' ');
-      }
-
-      time_position = format.rfind("%min");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
-      {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/60000000000) + ' ');
-      }
-
-      time_position = format.rfind("%h");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
-      {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/3600000000000) + ' ');
-      }
-      
-      return format;
-    }
-
-    template<Unit U>
-    std::string _format(Time<U> time, std::string format, const unsigned iteration) noexcept
-    {
-      auto iteration_position = format.find("%#");
-      if (iteration_position != std::string::npos)
-      {
-        format.replace(iteration_position, 2, std::to_string(iteration));
-      }
-      
-      return _format(time, format);
-    }
-  }
+// cleanup of internal macros
+# undef CHRONOMETRO_THREADSAFE
+# undef CHRONOMETRO_NODISCARD
+# undef CHRONOMETRO_NODISCARD_REASON
+# undef CHRONOMETRO_HOT
+# undef CHRONOMETRO_COLD
+# undef CHRONOMETRO_WRN_LOCK
 # undef CHRONOMETRO_WARNING
 }
 #endif
