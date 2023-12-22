@@ -147,6 +147,15 @@ namespace Chronometro
 #   define CHRONOMETRO_COLD
 # endif
 
+# if defined (CHRONOMETRO_THREADSAFE)
+    thread_local char _out_buffer[256];
+    std::mutex _out_mtx;
+#   define CHRONOMETRO_OUT_LOCK std::lock_guard<std::mutex> _out_lock{_backend::_out_mtx}
+# else
+    char _log_buffer[256];
+#   define CHRONOMETRO_OUT_LOCK
+# endif
+
 # if defined(CHRONOMETRO_WARNINGS)
 # if defined (CHRONOMETRO_THREADSAFE)
     thread_local char _wrn_buffer[256];
@@ -245,11 +254,11 @@ namespace Chronometro
     inline // unpause time measurement
     void unpause() noexcept;
   private:
-    bool                     is_paused    = false;
-    std::chrono::nanoseconds duration     = {};
-    std::chrono::nanoseconds duration_lap = {};
-    Clock::time_point        previous     = Clock::now();
-    Clock::time_point        previous_lap = previous;
+    bool                     _is_paused    = false;
+    std::chrono::nanoseconds _duration     = {};
+    std::chrono::nanoseconds _duration_lap = {};
+    Clock::time_point        _previous     = Clock::now();
+    Clock::time_point        _previous_lap = _previous;
   };
   
   template<Unit U>
@@ -288,26 +297,41 @@ namespace Chronometro
   };
 
 # undef  CHRONOMETRO_MEASURE
-# define CHRONOMETRO_MEASURE(...) for (Chronometro::Measure measurement{__VA_ARGS__}; measurement; ++measurement)
+# define CHRONOMETRO_MEASURE(...)                                                      \
+    for (Chronometro::Measure _measurement{__VA_ARGS__}; _measurement; ++_measurement)
 
+# undef  CHRONOMETRO_ONLY_EVERY_MS
+# define CHRONOMETRO_ONLY_EVERY_MS(N)                               \
+    if ([]{                                                         \
+      static_assert(N > 0, "N must be a non-zero positive number"); \
+      static Chronometro::Clock::time_point _previous = {};         \
+      auto _target = std::chrono::nanoseconds{N*1000000};           \
+      if ((Chronometro::Clock::now() - _previous) > _target)        \
+      {                                                             \
+        _previous = Chronometro::Clock::now();                      \
+        return true;                                                \
+      }                                                             \
+      return false;                                                 \
+    }())
+//----------------------------------------------------------------------------------------------------------------------
   template<Unit U>
   auto Stopwatch::lap() noexcept -> Time<U>
   {
     // measure current time
     const auto now = Clock::now();
 
-    std::chrono::nanoseconds::rep nanoseconds = duration_lap.count();
+    std::chrono::nanoseconds::rep nanoseconds = _duration_lap.count();
 
-    if (is_paused == false) CHRONOMETRO_HOT
+    if (_is_paused == false) CHRONOMETRO_HOT
     {
       // save elapsed times
-      duration    += now - previous;
-      nanoseconds += (now - previous_lap).count();
+      _duration    += now - _previous;
+      nanoseconds += (now - _previous_lap).count();
       
       // reset measured time
-      duration_lap = Clock::duration{};
-      previous     = Clock::now();
-      previous_lap = previous;
+      _duration_lap = Clock::duration{};
+      _previous     = Clock::now();
+      _previous_lap = _previous;
     }
     else CHRONOMETRO_WARNING("cannot be measured, must not be paused");
 
@@ -320,19 +344,19 @@ namespace Chronometro
     // measure current time
     const auto now = Clock::now();
 
-    std::chrono::nanoseconds::rep nanoseconds = duration.count();
+    std::chrono::nanoseconds::rep nanoseconds = _duration.count();
 
-    if (is_paused == false) CHRONOMETRO_HOT
+    if (_is_paused == false) CHRONOMETRO_HOT
     {
       // save elapsed times
-      duration     += now - previous;
-      duration_lap += now - previous_lap;
+      _duration     += now - _previous;
+      _duration_lap += now - _previous_lap;
       
-      nanoseconds   = duration.count();
+      nanoseconds   = _duration.count();
 
       // save time point
-      previous     = Clock::now();
-      previous_lap = previous;
+      _previous     = Clock::now();
+      _previous_lap = _previous;
     }
     else CHRONOMETRO_WARNING("cannot be measured, must not be paused");
     
@@ -345,13 +369,13 @@ namespace Chronometro
     const auto now = Clock::now();
 
     // add elapsed time up to now if not paused
-    if (is_paused == false) CHRONOMETRO_HOT
+    if (_is_paused == false) CHRONOMETRO_HOT
     {
-      is_paused = true;
+      _is_paused = true;
 
       // save elapsed times
-      duration     += now - previous;
-      duration_lap += now - previous_lap;
+      _duration     += now - _previous;
+      _duration_lap += now - _previous_lap;
     }
     else CHRONOMETRO_WARNING("cannot be paused further, is already paused");
   }
@@ -359,27 +383,27 @@ namespace Chronometro
   void Stopwatch::reset() noexcept
   {
     // reset measured time
-    duration     = Clock::duration{};
-    duration_lap = Clock::duration{};
+    _duration     = Clock::duration{};
+    _duration_lap = Clock::duration{};
 
     // hot reset if unpaused
-    if (is_paused == false)
+    if (_is_paused == false)
     {
-      previous     = Clock::now();
-      previous_lap = previous;
+      _previous     = Clock::now();
+      _previous_lap = _previous;
     } 
   }
 
   void Stopwatch::unpause() noexcept
   {
-    if (is_paused == true) CHRONOMETRO_HOT
+    if (_is_paused == true) CHRONOMETRO_HOT
     {
       // unpause
-      is_paused = false;
+      _is_paused = false;
 
       // reset measured time
-      previous     = Clock::now();
-      previous_lap = previous;
+      _previous     = Clock::now();
+      _previous_lap = _previous;
     }
     else CHRONOMETRO_WARNING("is already unpaused");
   }
@@ -424,6 +448,7 @@ namespace Chronometro
 
     if ((_lap_format != nullptr) && (_lap_format[0] != '\0'))
     {
+      CHRONOMETRO_OUT_LOCK;
       Global::out << _backend::_format(lap_time, _lap_format, _iterations - _iterations_left) << std::endl;
     }
 
@@ -447,63 +472,50 @@ namespace Chronometro
     auto time = _stopwatch.split();
     if (_total_format) CHRONOMETRO_HOT
     {
+      CHRONOMETRO_OUT_LOCK;
       Global::out << _backend::_format(time, _total_format) << std::endl;
     }
 
     return false;
   }
 
-# undef  CHRONOMETRO_ONLY_EVERY_MS
-# define CHRONOMETRO_ONLY_EVERY_MS(N)                               \
-    if ([]{                                                         \
-      static_assert(N > 0, "N must be a non-zero positive number"); \
-      static Chronometro::Clock::time_point previous = {};          \
-      auto target = std::chrono::nanoseconds{N*1000000};            \
-      if ((Chronometro::Clock::now() - previous) > target)          \
-      {                                                             \
-        previous = Chronometro::Clock::now();                       \
-        return true;                                                \
-      }                                                             \
-      return false;                                                 \
-    }())
-
-  template<>
+  template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::ns> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds << " ns" << std::endl;
   }
   
-  template<>
+  template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::us> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/1000 << " us" << std::endl;
   }
   
-  template<>
+  template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::ms> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/1000000 << " ms" << std::endl;
   }
   
-  template<>
+  template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::s> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/1000000000 << " s" << std::endl;
   }
   
-  template<>
+  template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::min> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/60000000000 << " min" << std::endl;
   }
   
-  template<>
+  template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::h> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/3600000000000 << " h" << std::endl;
   }
 
-  template<>
+  template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::automatic> time) noexcept
   {
     // 10 h < duration
@@ -539,13 +551,13 @@ namespace Chronometro
     // duration <= 10 us
     return ostream << Time<Unit::ns>{time.nanoseconds};
   }
-
-// cleanup of internal macros
+//----------------------------------------------------------------------------------------------------------------------
 # undef CHRONOMETRO_THREADSAFE
 # undef CHRONOMETRO_NODISCARD
 # undef CHRONOMETRO_NODISCARD_REASON
 # undef CHRONOMETRO_HOT
 # undef CHRONOMETRO_COLD
+# undef CHRONOMETRO_OUT_LOCK
 # undef CHRONOMETRO_WRN_LOCK
 # undef CHRONOMETRO_WARNING
 }
