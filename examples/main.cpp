@@ -50,17 +50,17 @@ int main()
   std::cout << '\n';
   CHRONOMETRO_MEASURE(1, nullptr, "should take 800 ms, took %ms")
   {
-    unsigned count1 = 0, count2 = 0;
-    while (count1 < 5)
+    unsigned inner_loops = 0, outer_loops = 0;
+    while (inner_loops < 5)
     {
-      CHRONOMETRO_ONLY_EVERY_MS(200) // first execution does not wait 500 ms
+      CHRONOMETRO_ONLY_EVERY_MS(200) // first execution does not wait 200 ms
       {
-        std::cout << "incrementing...\n";
-        ++count1;
+        std::cout << "executing inner loop...\n";
+        ++inner_loops;
       }
-      ++count2;
+      ++outer_loops;
     }
-    std::cout << "while loop executions: " << count2 << '\n';
+    std::cout << "outer loop executions: " << outer_loops << '\n';
   }
 
   std::cout << '\n';

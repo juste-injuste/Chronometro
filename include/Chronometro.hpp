@@ -59,15 +59,7 @@ execution time of functions or code blocks. See the included README.MD file for 
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
-{
-  namespace Version
-  {
-    constexpr long MAJOR  = 000;
-    constexpr long MINOR  = 001;
-    constexpr long PATCH  = 000;
-    constexpr long NUMBER = (MAJOR * 1000 + MINOR) * 1000 + PATCH;
-  }
-  
+{  
   // clock used to measure time
 #if defined(CHRONOMETRO_CLOCK) 
   using Clock = CHRONOMETRO_CLOCK;
@@ -77,11 +69,13 @@ namespace Chronometro
     std::chrono::high_resolution_clock,
     std::chrono::steady_clock
   >::type;
-# define CHRONOMETRO_CLOCK Clock
 #endif
 
   // measures the time it takes to execute the following statement/block n times, with labels
 # define CHRONOMETRO_MEASURE(...)
+
+  // measure elapsed time
+  class Stopwatch;
 
   // units in which Time<> can be displayed
   enum class Unit
@@ -95,12 +89,9 @@ namespace Chronometro
     automatic // deduce appropriate unit automatically
   };
 
-  // measure elapsed time
-  class Stopwatch;
-
   // type returned by Stopwatch::split() and Stopwatch::lap()
   template<Unit U>
-  struct Time;
+  class Time;
 
   // measure iterations via range-based for-loop
   class Measure;
@@ -117,9 +108,28 @@ namespace Chronometro
     std::ostream out{std::cout.rdbuf()}; // output ostream
     std::ostream wrn{std::clog.rdbuf()}; // warning ostream
   }
+
+  namespace Version
+  {
+    constexpr long MAJOR  = 000;
+    constexpr long MINOR  = 001;
+    constexpr long PATCH  = 000;
+    constexpr long NUMBER = (MAJOR * 1000 + MINOR) * 1000 + PATCH;
+  }
 //---Chronometro library: backend---------------------------------------------------------------------------------------
   namespace _backend
   {
+# if defined(__GNUC__) and (__GNUC__ >= 10)
+#   define CHRONOMETRO_HOT  [[likely]]
+#   define CHRONOMETRO_COLD [[unlikely]]
+# elif defined(__clang__) and (__clang_major__ >= 12)
+#   define CHRONOMETRO_HOT  [[likely]]
+#   define CHRONOMETRO_COLD [[unlikely]]
+# else
+#   define CHRONOMETRO_HOT
+#   define CHRONOMETRO_COLD
+# endif
+
 # if defined(__GNUC__) and (__GNUC__ >= 7)
 #   define CHRONOMETRO_NODISCARD [[nodiscard]]
 # elif defined(__clang__) and ((__clang_major__ > 3) or ((__clang_major__ == 3) and (__clang_minor__ >= 9)))
@@ -135,17 +145,6 @@ namespace Chronometro
 #else
 #   define CHRONOMETRO_NODISCARD_REASON(reason)
 #endif
-
-# if defined(__GNUC__) and (__GNUC__ >= 10)
-#   define CHRONOMETRO_HOT  [[likely]]
-#   define CHRONOMETRO_COLD [[unlikely]]
-# elif defined(__clang__) and (__clang_major__ >= 12)
-#   define CHRONOMETRO_HOT  [[likely]]
-#   define CHRONOMETRO_COLD [[unlikely]]
-# else
-#   define CHRONOMETRO_HOT
-#   define CHRONOMETRO_COLD
-# endif
 
 # if defined (CHRONOMETRO_THREADSAFE)
     thread_local char _out_buffer[256];
@@ -262,8 +261,9 @@ namespace Chronometro
   };
   
   template<Unit U>
-  struct Time
+  class Time final
   {
+  public:
     std::chrono::nanoseconds::rep nanoseconds;
   };
 
@@ -553,10 +553,10 @@ namespace Chronometro
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef CHRONOMETRO_THREADSAFE
-# undef CHRONOMETRO_NODISCARD
-# undef CHRONOMETRO_NODISCARD_REASON
 # undef CHRONOMETRO_HOT
 # undef CHRONOMETRO_COLD
+# undef CHRONOMETRO_NODISCARD
+# undef CHRONOMETRO_NODISCARD_REASON
 # undef CHRONOMETRO_OUT_LOCK
 # undef CHRONOMETRO_WRN_LOCK
 # undef CHRONOMETRO_WARNING
