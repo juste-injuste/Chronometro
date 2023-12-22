@@ -70,4 +70,10 @@ int main()
     std::cout << "currently doing iteration #" << iteration << '\n';
     sleep_for_ms(100);
   }
+
+  std::cout << '\n';
+  CHRONOMETRO_MEASURE(500, "", "average iteration took %Dms")
+  {
+    sleep_for_ms(2);
+  }
 }
