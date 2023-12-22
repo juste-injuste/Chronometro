@@ -273,11 +273,11 @@ namespace Chronometro
     inline // measure N iterations with iteration message and custom total message
     Measure(unsigned N, const char* lap_format, const char* total_format) noexcept;
   private:
-    Stopwatch      stopwatch;
-    const unsigned iterations      = 1;
-    unsigned       iterations_left = iterations;
-    const char*    lap_format      = nullptr;
-    const char*    total_format    = "total elapsed time: %ms";
+    Stopwatch      _stopwatch;
+    const unsigned _iterations      = 1;
+    unsigned       _iterations_left = _iterations;
+    const char*    _lap_format      = nullptr;
+    const char*    _total_format    = "total elapsed time: %ms";
   public: // iterator stuff
     inline auto begin()                    noexcept -> Measure&;
     inline auto end()                const noexcept -> Measure;
@@ -386,8 +386,8 @@ namespace Chronometro
 
   Measure& Measure::begin() noexcept
   {
-    iterations_left = iterations;
-    stopwatch.reset();
+    _iterations_left = _iterations;
+    _stopwatch.reset();
     return *this;
   }
 
@@ -397,39 +397,39 @@ namespace Chronometro
   }
   
   Measure::Measure(unsigned N) noexcept :
-    iterations(N)
+    _iterations(N)
   {}
   
   Measure::Measure(unsigned N, const char* lap_format) noexcept :
-    iterations(N),
-    lap_format(lap_format)
+    _iterations(N),
+    _lap_format(lap_format)
   {}
   
   Measure::Measure(unsigned N, const char* lap_format, const char* total_format) noexcept :
-    iterations(N),
-    lap_format(lap_format),
-    total_format(total_format)
+    _iterations(N),
+    _lap_format(lap_format),
+    _total_format(total_format)
   {}
   
   unsigned Measure::operator*() const noexcept
   {
-    return iterations - iterations_left;
+    return _iterations - _iterations_left;
   }
 
   void Measure::operator++() noexcept
   {
-    auto lap_time = stopwatch.lap();
+    auto lap_time = _stopwatch.lap();
     
-    stopwatch.pause();
+    _stopwatch.pause();
 
-    if ((lap_format != nullptr) && (lap_format[0] != '\0'))
+    if ((_lap_format != nullptr) && (_lap_format[0] != '\0'))
     {
-      Global::out << _backend::_format(lap_time, lap_format, iterations - iterations_left) << std::endl;
+      Global::out << _backend::_format(lap_time, _lap_format, _iterations - _iterations_left) << std::endl;
     }
 
-    --iterations_left;
+    --_iterations_left;
 
-    stopwatch.unpause();
+    _stopwatch.unpause();
   }
 
   bool Measure::operator!=(const Measure&) noexcept
@@ -439,15 +439,15 @@ namespace Chronometro
 
   Measure::operator bool() noexcept
   {     
-    if (iterations_left) CHRONOMETRO_HOT
+    if (_iterations_left) CHRONOMETRO_HOT
     {
       return true;
     }
 
-    auto time = stopwatch.split();
-    if (total_format) CHRONOMETRO_HOT
+    auto time = _stopwatch.split();
+    if (_total_format) CHRONOMETRO_HOT
     {
-      Global::out << _backend::_format(time, total_format) << std::endl;
+      Global::out << _backend::_format(time, _total_format) << std::endl;
     }
 
     return false;
