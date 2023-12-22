@@ -1,5 +1,5 @@
 #define CHRONOMETRO_WARNINGS
-#include "Chronometro.hpp"
+#include "../include/Chronometro.hpp"
 #include <iostream>
 
 // scuffed sleep function to demonstrate the basic usage of the library
@@ -72,8 +72,8 @@ int main()
   }
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(500, "", "average iteration took %Dms")
+  CHRONOMETRO_MEASURE(100, "", "average iteration took %Dus")
   {
-    sleep_for_ms(2);
+    sleep_for_ms(1);
   }
 }
