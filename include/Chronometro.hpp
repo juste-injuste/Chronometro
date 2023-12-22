@@ -175,58 +175,87 @@ namespace Chronometro
 #   define CHRONOMETRO_WARNING(...) void(0)
 # endif
 
-    template<Unit U>
-    std::string _format(Time<U> time, std::string&& format) noexcept
+    std::string _format(std::chrono::nanoseconds time, std::string&& format, unsigned iteration) noexcept
     {
-      auto time_position = format.rfind("%ms");
-      if (time_position != std::string::npos) CHRONOMETRO_HOT
+      auto position = format.find("%#");
+      if (position != std::string::npos)
       {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000) + ' ');
+        format.replace(position, 2, std::to_string(iteration));
       }
 
-      time_position = format.rfind("%us");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      position = format.rfind("%ms");
+      if (position != std::string::npos) CHRONOMETRO_HOT
       {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000) + ' ');
+        format.replace(position, 1, std::to_string((time/1000000).count()) + ' ');
       }
 
-      time_position = format.rfind("%ns");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      position = format.rfind("%Dms");
+      if (position != std::string::npos) CHRONOMETRO_COLD
       {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds) + ' ');
+        format.replace(position, 2, std::to_string(((time/1000000)/iteration).count()) + ' ');
       }
 
-      time_position = format.rfind("%s");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      position = format.rfind("%us");
+      if (position != std::string::npos) CHRONOMETRO_COLD
       {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/1000000000) + ' ');
+        format.replace(position, 1, std::to_string((time/1000).count()) + ' ');
       }
 
-      time_position = format.rfind("%min");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      position = format.rfind("%Dus");
+      if (position != std::string::npos) CHRONOMETRO_HOT
       {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/60000000000) + ' ');
+        format.replace(position, 2, std::to_string(((time/1000)/iteration).count()) + ' ');
       }
 
-      time_position = format.rfind("%h");
-      if (time_position != std::string::npos) CHRONOMETRO_COLD
+      position = format.rfind("%ns");
+      if (position != std::string::npos) CHRONOMETRO_COLD
       {
-        format.replace(time_position, 1, std::to_string(time.nanoseconds/3600000000000) + ' ');
+        format.replace(position, 1, std::to_string(time.count()) + ' ');
+      }
+
+      position = format.rfind("%Dns");
+      if (position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(position, 2, std::to_string((time/iteration).count()) + ' ');
+      }
+
+      position = format.rfind("%s");
+      if (position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(position, 1, std::to_string((time/1000000000).count()) + ' ');
+      }
+
+      position = format.rfind("%Ds");
+      if (position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(position, 2, std::to_string(((time/1000000000)/iteration).count()) + ' ');
+      }
+
+      position = format.rfind("%min");
+      if (position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(position, 1, std::to_string((time/60000000000).count()) + ' ');
+      }
+
+      position = format.rfind("%Dmin");
+      if (position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(position, 2, std::to_string(((time/60000000000)/iteration).count()) + ' ');
+      }
+
+      position = format.rfind("%h");
+      if (position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(position, 1, std::to_string((time/3600000000000).count()) + ' ');
+      }
+
+      position = format.rfind("%Dh");
+      if (position != std::string::npos) CHRONOMETRO_COLD
+      {
+        format.replace(position, 2, std::to_string(((time/3600000000000)/iteration).count()) + ' ');
       }
 
       return std::move(format);
-    }
-
-    template<Unit U>
-    std::string _format(Time<U> time, std::string&& format, const unsigned iteration) noexcept
-    {
-      auto iteration_position = format.find("%#");
-      if (iteration_position != std::string::npos)
-      {
-        format.replace(iteration_position, 2, std::to_string(iteration));
-      }
-
-      return _format(time, std::move(format));
     }
   }
 //----------------------------------------------------------------------------------------------------------------------
@@ -259,11 +288,11 @@ namespace Chronometro
     Clock::time_point        _previous_lap = _previous;
   };
 
-  template<Unit U>
+  template<Unit U = Unit::ms>
   class Time final
   {
   public:
-    std::chrono::nanoseconds::rep nanoseconds;
+    std::chrono::nanoseconds nanoseconds;
   };
 
   class Measure final
@@ -281,11 +310,13 @@ namespace Chronometro
     inline // measure N iterations with iteration message and custom total message
     Measure(unsigned N, const char* lap_format, const char* total_format) noexcept;
   private:
-    Stopwatch      _stopwatch;
-    const unsigned _iterations      = 1;
-    unsigned       _iterations_left = _iterations;
-    const char*    _lap_format      = nullptr;
-    const char*    _total_format    = "total elapsed time: %ms";
+    std::chrono::nanoseconds _iter_duration   = {};
+    Clock::time_point        _iter_start_time = Clock::now();
+    Clock::time_point        _start_time      = _iter_start_time;
+    const unsigned           _iterations      = 1;
+    unsigned                 _iters_left      = _iterations;
+    const char*              _lap_format      = nullptr;
+    const char*              _total_format    = "total elapsed time: %ms [avg = %D]";
   public: // iterator stuff
     inline auto begin()                    noexcept -> Measure&;
     inline auto end()                const noexcept -> Measure;
@@ -319,13 +350,13 @@ namespace Chronometro
     // measure current time
     const auto now = Clock::now();
 
-    std::chrono::nanoseconds::rep nanoseconds = _duration_lap.count();
+    std::chrono::nanoseconds nanoseconds = _duration_lap;
 
     if (_is_paused == false) CHRONOMETRO_HOT
     {
       // save elapsed times
-      _duration    += now - _previous;
-      nanoseconds += (now - _previous_lap).count();
+      _duration   += now - _previous;
+      nanoseconds += now - _previous_lap;
 
       // reset measured time
       _duration_lap = Clock::duration{};
@@ -343,7 +374,7 @@ namespace Chronometro
     // measure current time
     const auto now = Clock::now();
 
-    std::chrono::nanoseconds::rep nanoseconds = _duration.count();
+    std::chrono::nanoseconds nanoseconds = _duration;
 
     if (_is_paused == false) CHRONOMETRO_HOT
     {
@@ -351,7 +382,7 @@ namespace Chronometro
       _duration     += now - _previous;
       _duration_lap += now - _previous_lap;
 
-      nanoseconds   = _duration.count();
+      nanoseconds   = _duration;
 
       // save time point
       _previous     = Clock::now();
@@ -397,7 +428,6 @@ namespace Chronometro
   {
     if (_is_paused == true) CHRONOMETRO_HOT
     {
-      // unpause
       _is_paused = false;
 
       // reset measured time
@@ -405,18 +435,6 @@ namespace Chronometro
       _previous_lap = _previous;
     }
     else CHRONOMETRO_WARNING("is already unpaused");
-  }
-
-  Measure& Measure::begin() noexcept
-  {
-    _iterations_left = _iterations;
-    _stopwatch.reset();
-    return *this;
-  }
-
-  Measure Measure::end() const noexcept
-  {
-    return Measure(0);
   }
 
   Measure::Measure(unsigned N) noexcept :
@@ -434,26 +452,43 @@ namespace Chronometro
     _total_format(total_format)
   {}
 
+  Measure& Measure::begin() noexcept
+  {
+    _iters_left      = _iterations;
+    
+    _iter_duration   = {};
+    _iter_start_time = Clock::now();
+    _start_time      = _iter_start_time;
+
+    return *this;
+  }
+
+  Measure Measure::end() const noexcept
+  {
+    return Measure(0);
+  }
+
   unsigned Measure::operator*() const noexcept
   {
-    return _iterations - _iterations_left;
+    return _iterations - _iters_left;
   }
 
   void Measure::operator++() noexcept
   {
-    auto lap_time = _stopwatch.lap();
-
-    _stopwatch.pause();
+    _iter_duration += Clock::now() - _iter_start_time;
 
     if ((_lap_format != nullptr) and (_lap_format[0] != '\0'))
     {
+      auto time      = Time<>{_iter_duration};
+      auto iteration = _iterations - _iters_left;
       CHRONOMETRO_OUT_LOCK;
-      Global::out << _backend::_format(lap_time, _lap_format, _iterations - _iterations_left) << std::endl;
+      Global::out << _backend::_format(time.nanoseconds, _lap_format, iteration) << std::endl;
     }
 
-    --_iterations_left;
+    --_iters_left;
 
-    _stopwatch.unpause();
+    _iter_duration   = {};
+    _iter_start_time = Clock::now();
   }
 
   bool Measure::operator!=(const Measure&) noexcept
@@ -463,16 +498,18 @@ namespace Chronometro
 
   Measure::operator bool() noexcept
   {
-    if (_iterations_left) CHRONOMETRO_HOT
+    auto now = Clock::now();
+
+    if (_iters_left) CHRONOMETRO_HOT
     {
       return true;
     }
 
-    auto time = _stopwatch.split();
     if (_total_format) CHRONOMETRO_HOT
     {
+      auto time = Time<>{std::chrono::nanoseconds(now - _start_time)};
       CHRONOMETRO_OUT_LOCK;
-      Global::out << _backend::_format(time, _total_format) << std::endl;
+      Global::out << _backend::_format(time.nanoseconds, _total_format, _iterations - _iters_left) << std::endl;
     }
 
     return false;
@@ -481,68 +518,68 @@ namespace Chronometro
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::ns> time) noexcept
   {
-    return ostream << "elapsed time: " << time.nanoseconds << " ns" << std::endl;
+    return ostream << "elapsed time: " << time.nanoseconds.count() << " ns" << std::endl;
   }
 
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::us> time) noexcept
   {
-    return ostream << "elapsed time: " << time.nanoseconds/1000 << " us" << std::endl;
+    return ostream << "elapsed time: " << (time.nanoseconds/1000).count() << " us" << std::endl;
   }
 
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::ms> time) noexcept
   {
-    return ostream << "elapsed time: " << time.nanoseconds/1000000 << " ms" << std::endl;
+    return ostream << "elapsed time: " << (time.nanoseconds/1000000).count() << " ms" << std::endl;
   }
 
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::s> time) noexcept
   {
-    return ostream << "elapsed time: " << time.nanoseconds/1000000000 << " s" << std::endl;
+    return ostream << "elapsed time: " << (time.nanoseconds/1000000000).count() << " s" << std::endl;
   }
 
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::min> time) noexcept
   {
-    return ostream << "elapsed time: " << time.nanoseconds/60000000000 << " min" << std::endl;
+    return ostream << "elapsed time: " << (time.nanoseconds/60000000000).count() << " min" << std::endl;
   }
 
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::h> time) noexcept
   {
-    return ostream << "elapsed time: " << time.nanoseconds/3600000000000 << " h" << std::endl;
+    return ostream << "elapsed time: " << (time.nanoseconds/3600000000000).count() << " h" << std::endl;
   }
 
   template<>
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::automatic> time) noexcept
   {
     // 10 h < duration
-    if (time.nanoseconds > 36000000000000) CHRONOMETRO_COLD
+    if (time.nanoseconds.count() > 36000000000000) CHRONOMETRO_COLD
     {
       return ostream << Time<Unit::h>{time.nanoseconds};
     }
 
     // 10 min < duration <= 10 h
-    if (time.nanoseconds > 600000000000) CHRONOMETRO_COLD
+    if (time.nanoseconds.count() > 600000000000) CHRONOMETRO_COLD
     {
       return ostream << Time<Unit::min>{time.nanoseconds};
     }
 
     // 10 s < duration <= 10 m
-    if (time.nanoseconds > 10000000000)
+    if (time.nanoseconds.count() > 10000000000)
     {
       return ostream << Time<Unit::s>{time.nanoseconds};
     }
 
     // 10 ms < duration <= 10 s
-    if (time.nanoseconds > 10000000)
+    if (time.nanoseconds.count() > 10000000)
     {
       return ostream << Time<Unit::ms>{time.nanoseconds};
     }
 
     // 10 us < duration <= 10 ms
-    if (time.nanoseconds > 10000)
+    if (time.nanoseconds.count() > 10000)
     {
       return ostream << Time<Unit::us>{time.nanoseconds};
     }
