@@ -35,18 +35,18 @@ Version 0.1.0 - Initial release
 -----description--------------------------------------------------------------------------------------------------------
 
 Chronometro is a simple and lightweight C++11 (and newer) library that allows you to measure the
-execution time of functions or code blocks. See the included README.MD file for more information.
+execution time of code blocks and more. See the included README.MD file for more information.
 
 -----inclusion guard--------------------------------------------------------------------------------------------------*/
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
-//---necessary standard libraries---------------------------------------------------------------------------------------
+//---necessary libraries------------------------------------------------------------------------------------------------
 #include <chrono>       // for std::chrono::steady_clock, std::chrono::high_resolution_clock, std::chrono::nanoseconds
 #include <ostream>      // for std::ostream
 #include <iostream>     // for std::cout, std::clog, std::endl
 #include <string>       // for std::string
 #include <utility>      // for std::move
-//---supplementary standard libraries-----------------------------------------------------------------------------------
+//---supplementary libraries--------------------------------------------------------------------------------------------
 #if not defined(CHRONOMETRO_CLOCK)
 # include <type_traits> // for std::conditional
 #endif
@@ -100,7 +100,7 @@ namespace Chronometro
 # define CHRONOMETRO_ONLY_EVERY_MS(N)
 
   // print time to ostream
-  template<Unit U> inline
+  template<Unit U>
   std::ostream& operator<<(std::ostream& ostream, Time<U> time) noexcept;
 
   namespace Global
@@ -514,7 +514,7 @@ namespace Chronometro
     return ostream << "elapsed time: " << time.nanoseconds/3600000000000 << " h" << std::endl;
   }
 
-  template<> inline
+  template<>
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::automatic> time) noexcept
   {
     // 10 h < duration
