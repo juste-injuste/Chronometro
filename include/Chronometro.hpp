@@ -5,7 +5,7 @@ justin.asselin@usherbrooke.ca
 https://github.com/juste-injuste/Chronometro
 
 -----licence------------------------------------------------------------------------------------------------------------
- 
+
 MIT License
 
 Copyright (c) 2023 Justin Asselin (juste-injuste)
@@ -27,7 +27,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
- 
+
 -----versions-----------------------------------------------------------------------------------------------------------
 
 Version 0.1.0 - Initial release
@@ -41,7 +41,7 @@ execution time of functions or code blocks. See the included README.MD file for 
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
 //---necessary standard libraries---------------------------------------------------------------------------------------
-#include <chrono>       // for std::chrono::high_resolution_clock and std::chrono::nanoseconds
+#include <chrono>       // for std::chrono::steady_clock, std::chrono::high_resolution_clock, std::chrono::nanoseconds
 #include <ostream>      // for std::ostream
 #include <iostream>     // for std::cout, std::clog, std::endl
 #include <string>       // for std::string
@@ -59,9 +59,9 @@ execution time of functions or code blocks. See the included README.MD file for 
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
-{  
+{
   // clock used to measure time
-#if defined(CHRONOMETRO_CLOCK) 
+#if defined(CHRONOMETRO_CLOCK)
   using Clock = CHRONOMETRO_CLOCK;
 #else
   using Clock = std::conditional<
@@ -138,15 +138,15 @@ namespace Chronometro
 #   define CHRONOMETRO_NODISCARD
 # endif
 
-#if defined(__GNUC__) && (__GNUC__ >= 10)
+#if defined(__GNUC__) and (__GNUC__ >= 10)
 #   define CHRONOMETRO_NODISCARD_REASON(reason) [[nodiscard(reason)]]
-#elif defined(__clang__) && (__clang_major__ >= 10)
+#elif defined(__clang__) and (__clang_major__ >= 10)
 #   define CHRONOMETRO_NODISCARD_REASON(reason) [[nodiscard(reason)]]
 #else
 #   define CHRONOMETRO_NODISCARD_REASON(reason)
 #endif
 
-# if defined (CHRONOMETRO_THREADSAFE)
+# if defined(CHRONOMETRO_THREADSAFE)
     thread_local char _out_buffer[256];
     std::mutex _out_mtx;
 #   define CHRONOMETRO_OUT_LOCK std::lock_guard<std::mutex> _out_lock{_backend::_out_mtx}
@@ -156,7 +156,7 @@ namespace Chronometro
 # endif
 
 # if defined(CHRONOMETRO_WARNINGS)
-# if defined (CHRONOMETRO_THREADSAFE)
+# if defined(CHRONOMETRO_THREADSAFE)
     thread_local char _wrn_buffer[256];
     std::mutex _wrn_mtx;
 #   define CHRONOMETRO_WRN_LOCK std::lock_guard<std::mutex> lock{_backend::_wrn_mtx}
@@ -164,13 +164,12 @@ namespace Chronometro
     char _log_buffer[256];
 #   define CHRONOMETRO_WRN_LOCK
 # endif
-    
-#   define CHRONOMETRO_WARNING(...)                  \
-      [&](const char* caller){                       \
-        sprintf(_backend::_wrn_buffer, __VA_ARGS__); \
-        CHRONOMETRO_WRN_LOCK;                        \
-        Global::wrn << caller << ": "                \
-        << _backend::_wrn_buffer << std::endl;       \
+
+#   define CHRONOMETRO_WARNING(...)                                          \
+      [&](const char* caller){                                               \
+        sprintf(_backend::_wrn_buffer, __VA_ARGS__);                         \
+        CHRONOMETRO_WRN_LOCK;                                                \
+        Global::wrn << caller << ": " << _backend::_wrn_buffer << std::endl; \
       }(__func__)
 # else
 #   define CHRONOMETRO_WARNING(...) void(0)
@@ -214,7 +213,7 @@ namespace Chronometro
       {
         format.replace(time_position, 1, std::to_string(time.nanoseconds/3600000000000) + ' ');
       }
-      
+
       return std::move(format);
     }
 
@@ -226,7 +225,7 @@ namespace Chronometro
       {
         format.replace(iteration_position, 2, std::to_string(iteration));
       }
-      
+
       return _format(time, std::move(format));
     }
   }
@@ -238,7 +237,7 @@ namespace Chronometro
     CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time
     auto lap()     noexcept -> Time<U>;
-    
+
     template<Unit U = Unit::automatic>
     CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
@@ -259,7 +258,7 @@ namespace Chronometro
     Clock::time_point        _previous     = Clock::now();
     Clock::time_point        _previous_lap = _previous;
   };
-  
+
   template<Unit U>
   class Time final
   {
@@ -272,7 +271,7 @@ namespace Chronometro
   public:
     // measure 1 iteration
     Measure() noexcept = default;
-    
+
     inline // measure N iterations
     Measure(unsigned N) noexcept;
 
@@ -327,7 +326,7 @@ namespace Chronometro
       // save elapsed times
       _duration    += now - _previous;
       nanoseconds += (now - _previous_lap).count();
-      
+
       // reset measured time
       _duration_lap = Clock::duration{};
       _previous     = Clock::now();
@@ -351,7 +350,7 @@ namespace Chronometro
       // save elapsed times
       _duration     += now - _previous;
       _duration_lap += now - _previous_lap;
-      
+
       nanoseconds   = _duration.count();
 
       // save time point
@@ -359,7 +358,7 @@ namespace Chronometro
       _previous_lap = _previous;
     }
     else CHRONOMETRO_WARNING("cannot be measured, must not be paused");
-    
+
     return Time<U>{nanoseconds};
   }
 
@@ -391,7 +390,7 @@ namespace Chronometro
     {
       _previous     = Clock::now();
       _previous_lap = _previous;
-    } 
+    }
   }
 
   void Stopwatch::unpause() noexcept
@@ -419,22 +418,22 @@ namespace Chronometro
   {
     return Measure(0);
   }
-  
+
   Measure::Measure(unsigned N) noexcept :
     _iterations(N)
   {}
-  
+
   Measure::Measure(unsigned N, const char* lap_format) noexcept :
     _iterations(N),
     _lap_format(lap_format)
   {}
-  
+
   Measure::Measure(unsigned N, const char* lap_format, const char* total_format) noexcept :
     _iterations(N),
     _lap_format(lap_format),
     _total_format(total_format)
   {}
-  
+
   unsigned Measure::operator*() const noexcept
   {
     return _iterations - _iterations_left;
@@ -443,10 +442,10 @@ namespace Chronometro
   void Measure::operator++() noexcept
   {
     auto lap_time = _stopwatch.lap();
-    
+
     _stopwatch.pause();
 
-    if ((_lap_format != nullptr) && (_lap_format[0] != '\0'))
+    if ((_lap_format != nullptr) and (_lap_format[0] != '\0'))
     {
       CHRONOMETRO_OUT_LOCK;
       Global::out << _backend::_format(lap_time, _lap_format, _iterations - _iterations_left) << std::endl;
@@ -463,7 +462,7 @@ namespace Chronometro
   }
 
   Measure::operator bool() noexcept
-  {     
+  {
     if (_iterations_left) CHRONOMETRO_HOT
     {
       return true;
@@ -484,31 +483,31 @@ namespace Chronometro
   {
     return ostream << "elapsed time: " << time.nanoseconds << " ns" << std::endl;
   }
-  
+
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::us> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/1000 << " us" << std::endl;
   }
-  
+
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::ms> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/1000000 << " ms" << std::endl;
   }
-  
+
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::s> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/1000000000 << " s" << std::endl;
   }
-  
+
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::min> time) noexcept
   {
     return ostream << "elapsed time: " << time.nanoseconds/60000000000 << " min" << std::endl;
   }
-  
+
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::h> time) noexcept
   {

@@ -30,21 +30,21 @@ int main()
   std::cout << '\n';
   CHRONOMETRO_MEASURE()
   std::cout << "once\n";
-  
+
   std::cout << '\n';
   CHRONOMETRO_MEASURE(2)
   std::cout << "twice\n";
-  
+
   std::cout << '\n';
   CHRONOMETRO_MEASURE(3, "iteration %# took %us")
   std::cout << "thrice\n";
-  
+
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(4, "iteration %# took %us",  "took %ms overall")
+  CHRONOMETRO_MEASURE(4, "iteration %# took %us",  "took %ns overall")
   std::cout << "four times\n";
-  
+
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(5, "",  "took %ms overall")
+  CHRONOMETRO_MEASURE(5, "",  "took %ns overall")
   std::cout << "five times\n";
 
   std::cout << '\n';
@@ -60,6 +60,7 @@ int main()
       }
       ++outer_loops;
     }
+    std::cout << "inner loop executions: " << inner_loops << '\n';
     std::cout << "outer loop executions: " << outer_loops << '\n';
   }
 
