@@ -292,13 +292,12 @@ namespace Chronometro
     inline // measure N iterations with iteration message and custom total message
     Measure(unsigned N, const char* lap_format, const char* total_format) noexcept;
   private:
-    std::chrono::nanoseconds _iter_duration   = {};
-    Clock::time_point        _iter_start_time = Clock::now();
-    Clock::time_point        _start_time      = _iter_start_time;
-    const unsigned           _iterations      = 1;
-    unsigned                 _iters_left      = _iterations;
-    const char*              _lap_format      = nullptr;
-    const char*              _total_format    = "total elapsed time: %ms [avg = %Dus]";
+    const unsigned           _iterations   = 1;
+    unsigned                 _iters_left   = _iterations;
+    const char*              _lap_format   = nullptr;
+    const char*              _total_format = "total elapsed time: %ms [avg = %Dus]";
+    std::chrono::nanoseconds _duration     = {};
+    Clock::time_point        _start_time   = Clock::now();
   public: // iterator stuff
     inline auto begin()                    noexcept -> Measure&;
     inline auto end()                const noexcept -> Measure;
@@ -442,9 +441,8 @@ namespace Chronometro
   {
     _iters_left      = _iterations;
     
-    _iter_duration   = {};
-    _iter_start_time = Clock::now();
-    _start_time      = _iter_start_time;
+    _duration  = {};
+    _start_time = Clock::now();
 
     return *this;
   }
@@ -461,20 +459,21 @@ namespace Chronometro
 
   void Measure::operator++() noexcept
   {
-    _iter_duration += Clock::now() - _iter_start_time;
+    using namespace std::chrono;
+    auto _iter_duration = duration_cast<nanoseconds>(Clock::now() - _start_time);
+    _duration    += _iter_duration;
 
     if ((_lap_format != nullptr) and (_lap_format[0] != '\0'))
     {
-      auto time      = Time<>{_iter_duration};
       auto iteration = _iterations - _iters_left;
       CHRONOMETRO_OUT_LOCK;
-      Global::out << _backend::_format_lap(time.nanoseconds, _lap_format, iteration) << std::endl;
+      Global::out << _backend::_format_lap(_iter_duration, _lap_format, iteration) << std::endl;
     }
 
     --_iters_left;
 
     _iter_duration   = {};
-    _iter_start_time = Clock::now();
+    _start_time = Clock::now();
   }
 
   bool Measure::operator!=(const Measure&) noexcept
@@ -484,8 +483,6 @@ namespace Chronometro
 
   Measure::operator bool() noexcept
   {
-    auto now = Clock::now();
-
     if (_iters_left) CHRONOMETRO_HOT
     {
       return true;
@@ -493,9 +490,8 @@ namespace Chronometro
 
     if (_total_format) CHRONOMETRO_HOT
     {
-      auto time = Time<>{std::chrono::nanoseconds(now - _start_time)};
       CHRONOMETRO_OUT_LOCK;
-      Global::out << _backend::_format_total(time.nanoseconds, _total_format, _iterations) << std::endl;
+      Global::out << _backend::_format_total(_duration, _total_format, _iterations) << std::endl;
     }
 
     return false;
