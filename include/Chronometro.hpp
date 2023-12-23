@@ -178,52 +178,59 @@ namespace Chronometro
     std::string _format(std::chrono::nanoseconds time, std::string&& format) noexcept
     {
       auto position = format.rfind("%ms");
-      if (position != std::string::npos) CHRONOMETRO_HOT
+      while (position != std::string::npos)
       {
         format.replace(position, 1, std::to_string((time/1000000).count()) + ' ');
+        position = format.find("%ms");
       }
 
       position = format.rfind("%us");
-      if (position != std::string::npos) CHRONOMETRO_COLD
+      while (position != std::string::npos)
       {
         format.replace(position, 1, std::to_string((time/1000).count()) + ' ');
+        position = format.find("%us");
       }
 
       position = format.rfind("%ns");
-      if (position != std::string::npos) CHRONOMETRO_COLD
+      while (position != std::string::npos)
       {
         format.replace(position, 1, std::to_string(time.count()) + ' ');
+        position = format.find("%ns");
       }
 
       position = format.rfind("%s");
-      if (position != std::string::npos) CHRONOMETRO_COLD
+      while (position != std::string::npos)
       {
         format.replace(position, 1, std::to_string((time/1000000000).count()) + ' ');
+        position = format.find("%s");
       }
 
       position = format.rfind("%min");
-      if (position != std::string::npos) CHRONOMETRO_COLD
+      while (position != std::string::npos)
       {
         format.replace(position, 1, std::to_string((time/60000000000).count()) + ' ');
+        position = format.find("%min");
       }
 
       position = format.rfind("%h");
-      if (position != std::string::npos) CHRONOMETRO_COLD
+      while (position != std::string::npos)
       {
         format.replace(position, 1, std::to_string((time/3600000000000).count()) + ' ');
+        position = format.find("%h");
       }
-      
+
       return std::move(format);
     }
 
     std::string _format_lap(std::chrono::nanoseconds time, std::string&& format, unsigned iteration) noexcept
     {
       auto position = format.find("%#");
-      if (position != std::string::npos) CHRONOMETRO_HOT
+      while (position != std::string::npos)
       {
         format.replace(position, 2, std::to_string(iteration));
+        position = format.rfind("%#");
       }
-      
+
       return _format(time, std::move(format));
     }
 
@@ -232,9 +239,10 @@ namespace Chronometro
       format = _format(time, std::move(format));
 
       auto position = format.rfind("%D");
-      if (position != std::string::npos) CHRONOMETRO_HOT
+      while (position != std::string::npos)
       {
         format.erase(position + 1, 1);
+        position = format.find("%D");
       }
 
       return _format(time/iterations, std::move(format));
@@ -280,8 +288,8 @@ namespace Chronometro
   class Measure final
   {
   public:
-    inline // measure 1 iteration
-    Measure() noexcept;
+    // measure 1 iteration
+    Measure() noexcept = default;
 
     inline // measure N iterations
     Measure(unsigned N) noexcept;
@@ -295,7 +303,7 @@ namespace Chronometro
     const unsigned           _iterations   = 1;
     unsigned                 _iters_left   = _iterations;
     const char*              _lap_format   = nullptr;
-    const char*              _total_format = "total elapsed time: %ms [avg = %Dus]";
+    const char*              _total_format = "total elapsed time: %ms";
     std::chrono::nanoseconds _duration     = {};
     Clock::time_point        _start_time   = Clock::now();
   public: // iterator stuff
@@ -418,17 +426,15 @@ namespace Chronometro
     else CHRONOMETRO_WARNING("is already unpaused");
   }
 
-  Measure::Measure() noexcept :
-    _total_format("total elapsed time: %ms")
-  {}
-
   Measure::Measure(unsigned N) noexcept :
-    _iterations(N)
+    _iterations(N),
+    _total_format((N > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(unsigned N, const char* lap_format) noexcept :
     _iterations(N),
-    _lap_format(lap_format)
+    _lap_format(lap_format),
+    _total_format((N > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(unsigned N, const char* lap_format, const char* total_format) noexcept :
@@ -440,7 +446,7 @@ namespace Chronometro
   Measure& Measure::begin() noexcept
   {
     _iters_left      = _iterations;
-    
+
     _duration  = {};
     _start_time = Clock::now();
 
