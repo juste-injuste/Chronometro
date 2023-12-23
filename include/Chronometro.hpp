@@ -341,11 +341,10 @@ namespace Chronometro
 
     if (_is_paused == false) CHRONOMETRO_HOT
     {
-      auto elapsed_time = now - _previous;
-      _duration_tot += elapsed_time;
-      lap_duration  += elapsed_time;
+      _duration_tot += now - _previous;
+      lap_duration  += now - _previous;
 
-      _duration_lap  = {}; // reset lap time
+      _duration_lap  = {};
 
       _previous = Clock::now(); // start measurement from here
     }
@@ -365,8 +364,8 @@ namespace Chronometro
     {
       tot_duration += now - _previous;
 
-      _duration_tot = {}; // reset tot time
-      _duration_lap = {}; // reset lap time
+      _duration_tot = {};
+      _duration_lap = {};
       
       _previous = Clock::now(); // start measurement from here
     }
@@ -377,15 +376,12 @@ namespace Chronometro
 
   void Stopwatch::pause() noexcept
   {
-    // measure current time
-    const auto now = Clock::now();
+    auto now = Clock::now();
 
-    // add elapsed time up to now if not paused
     if (_is_paused == false) CHRONOMETRO_HOT
     {
       _is_paused = true;
 
-      // save elapsed times
       _duration_tot += now - _previous;
       _duration_lap += now - _previous;
     }
