@@ -319,17 +319,17 @@ namespace Chronometro
     for (Chronometro::Measure _measurement{__VA_ARGS__}; _measurement; ++_measurement)
 
 # undef  CHRONOMETRO_ONLY_EVERY_MS
-# define CHRONOMETRO_ONLY_EVERY_MS(N)                               \
-    if ([]{                                                         \
-      static_assert(N > 0, "N must be a non-zero positive number"); \
-      static Chronometro::Clock::time_point _previous = {};         \
-      auto _target = std::chrono::nanoseconds{N*1000000};           \
-      if ((Chronometro::Clock::now() - _previous) > _target)        \
-      {                                                             \
-        _previous = Chronometro::Clock::now();                      \
-        return true;                                                \
-      }                                                             \
-      return false;                                                 \
+# define CHRONOMETRO_ONLY_EVERY_MS(N)                                 \
+    if ([]{                                                           \
+      static_assert((N) > 0, "N must be a non-zero positive number"); \
+      static Chronometro::Clock::time_point _previous = {};           \
+      auto _target = std::chrono::nanoseconds{(N)*1000000};           \
+      if ((Chronometro::Clock::now() - _previous) > _target)          \
+      {                                                               \
+        _previous = Chronometro::Clock::now();                        \
+        return true;                                                  \
+      }                                                               \
+      return false;                                                   \
     }())
 //----------------------------------------------------------------------------------------------------------------------
   template<Unit U>
@@ -415,7 +415,7 @@ namespace Chronometro
     }
     else CHRONOMETRO_WARNING("is already unpaused");
   }
-
+//----------------------------------------------------------------------------------------------------------------------
   Measure::Measure(unsigned N) noexcept :
     _iterations(N),
     _total_format((N > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
@@ -461,9 +461,8 @@ namespace Chronometro
 
     if ((_lap_format != nullptr) and (_lap_format[0] != '\0'))
     {
-      auto iteration = _iterations - _iters_left;
       CHRONOMETRO_OUT_LOCK;
-      Global::out << _backend::_format_lap(_iter_duration, _lap_format, iteration) << std::endl;
+      Global::out << _backend::_format_lap(_iter_duration, _lap_format, _iterations - _iters_left) << std::endl;
     }
 
     --_iters_left;
@@ -492,7 +491,7 @@ namespace Chronometro
 
     return false;
   }
-
+//----------------------------------------------------------------------------------------------------------------------
   template<> inline
   std::ostream& operator<<(std::ostream& ostream, Time<Unit::ns> time) noexcept
   {
