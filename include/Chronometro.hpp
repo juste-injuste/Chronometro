@@ -272,10 +272,9 @@ namespace Chronometro
     void unpause() noexcept;
   private:
     bool                     _is_paused    = false;
-    std::chrono::nanoseconds _duration     = {};
+    std::chrono::nanoseconds _duration_tot = {};
     std::chrono::nanoseconds _duration_lap = {};
     Clock::time_point        _previous     = Clock::now();
-    Clock::time_point        _previous_lap = _previous;
   };
 
   template<Unit U = Unit::ms>
@@ -336,50 +335,44 @@ namespace Chronometro
   template<Unit U>
   auto Stopwatch::lap() noexcept -> Time<U>
   {
-    // measure current time
-    const auto now = Clock::now();
+    auto now = Clock::now();
 
-    std::chrono::nanoseconds nanoseconds = _duration_lap;
+    std::chrono::nanoseconds lap_duration = _duration_lap;
 
     if (_is_paused == false) CHRONOMETRO_HOT
     {
-      // save elapsed times
-      _duration   += now - _previous;
-      nanoseconds += now - _previous_lap;
+      auto elapsed_time = now - _previous;
+      _duration_tot += elapsed_time;
+      lap_duration  += elapsed_time;
 
-      // reset measured time
-      _duration_lap = Clock::duration{};
-      _previous     = Clock::now();
-      _previous_lap = _previous;
+      _duration_lap  = {}; // reset lap time
+
+      _previous = Clock::now(); // start measurement from here
     }
     else CHRONOMETRO_WARNING("cannot be measured, must not be paused");
 
-    return Time<U>{nanoseconds};
+    return Time<U>{lap_duration};
   }
 
   template<Unit U>
   auto Stopwatch::split() noexcept -> Time<U>
   {
-    // measure current time
-    const auto now = Clock::now();
+    auto now = Clock::now();
 
-    std::chrono::nanoseconds nanoseconds = _duration;
+    std::chrono::nanoseconds tot_duration = _duration_tot;
 
     if (_is_paused == false) CHRONOMETRO_HOT
     {
-      // save elapsed times
-      _duration     += now - _previous;
-      _duration_lap += now - _previous_lap;
+      tot_duration += now - _previous;
 
-      nanoseconds   = _duration;
-
-      // save time point
-      _previous     = Clock::now();
-      _previous_lap = _previous;
+      _duration_tot = {}; // reset tot time
+      _duration_lap = {}; // reset lap time
+      
+      _previous = Clock::now(); // start measurement from here
     }
     else CHRONOMETRO_WARNING("cannot be measured, must not be paused");
 
-    return Time<U>{nanoseconds};
+    return Time<U>{tot_duration};
   }
 
   void Stopwatch::pause() noexcept
@@ -393,8 +386,8 @@ namespace Chronometro
       _is_paused = true;
 
       // save elapsed times
-      _duration     += now - _previous;
-      _duration_lap += now - _previous_lap;
+      _duration_tot += now - _previous;
+      _duration_lap += now - _previous;
     }
     else CHRONOMETRO_WARNING("cannot be paused further, is already paused");
   }
@@ -402,14 +395,13 @@ namespace Chronometro
   void Stopwatch::reset() noexcept
   {
     // reset measured time
-    _duration     = Clock::duration{};
-    _duration_lap = Clock::duration{};
+    _duration_tot = {};
+    _duration_lap = {};
 
     // hot reset if unpaused
     if (_is_paused == false)
     {
-      _previous     = Clock::now();
-      _previous_lap = _previous;
+      _previous = Clock::now(); // start measurement from here
     }
   }
 
@@ -419,9 +411,7 @@ namespace Chronometro
     {
       _is_paused = false;
 
-      // reset measured time
-      _previous     = Clock::now();
-      _previous_lap = _previous;
+      _previous  = Clock::now(); // start measurement from here
     }
     else CHRONOMETRO_WARNING("is already unpaused");
   }
