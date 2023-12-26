@@ -54,6 +54,11 @@ execution time of code blocks and more. See the included README.MD file for more
 #if defined(__STDCPP_THREADS__) and not defined(CHRONOMETRO_NOT_THREADSAFE)
 # define CHRONOMETRO_THREADSAFE
 # include <mutex>       // for std::mutex, std::lock_guard
+# define CHRONOMETRO_THREADLOCAL thread_local
+# define CHRONOMETRO_LOCK(M)     std::lock_guard<decltype(M)> _lock{M}
+#else
+# define CHRONOMETRO_THREADLOCAL
+# define CHRONOMETRO_LOCK(M)
 #endif
 # include <cstdio>      // for std::sprintf
 #endif
@@ -119,10 +124,10 @@ namespace Chronometro
 //---Chronometro library: backend---------------------------------------------------------------------------------------
   namespace _backend
   {
-# if defined(__GNUC__) and (__GNUC__ >= 10)
+# if defined(__clang__) and (__clang_major__ >= 12)
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
-# elif defined(__clang__) and (__clang_major__ >= 12)
+# elif defined(__GNUC__) and (__GNUC__ >= 10)
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
 # else
@@ -130,45 +135,37 @@ namespace Chronometro
 #   define CHRONOMETRO_COLD
 # endif
 
-# if defined(__GNUC__) and (__GNUC__ >= 7)
+# if defined(__clang__) and ((__clang_major__ > 3) or ((__clang_major__ == 3) and (__clang_minor__ >= 9)))
 #   define CHRONOMETRO_NODISCARD [[nodiscard]]
-# elif defined(__clang__) and ((__clang_major__ > 3) or ((__clang_major__ == 3) and (__clang_minor__ >= 9)))
+# elif defined(__GNUC__) and (__GNUC__ >= 7)
 #   define CHRONOMETRO_NODISCARD [[nodiscard]]
 # else
 #   define CHRONOMETRO_NODISCARD
 # endif
 
-#if defined(__GNUC__) and (__GNUC__ >= 10)
+# if defined(__clang__) and (__clang_major__ >= 10)
 #   define CHRONOMETRO_NODISCARD_REASON(reason) [[nodiscard(reason)]]
-#elif defined(__clang__) and (__clang_major__ >= 10)
+# elif defined(__GNUC__) and (__GNUC__ >= 10)
 #   define CHRONOMETRO_NODISCARD_REASON(reason) [[nodiscard(reason)]]
-#else
-#   define CHRONOMETRO_NODISCARD_REASON(reason)
-#endif
-
-# if defined(CHRONOMETRO_THREADSAFE)
-    thread_local char _out_buffer[256];
-    std::mutex _out_mtx;
-#   define CHRONOMETRO_OUT_LOCK std::lock_guard<std::mutex> _out_lock{_backend::_out_mtx}
 # else
-    char _log_buffer[256];
-#   define CHRONOMETRO_OUT_LOCK
+#   define CHRONOMETRO_NODISCARD_REASON(reason)
+# endif
+
+    CHRONOMETRO_THREADLOCAL char _out_buffer[256];
+# if defined(CHRONOMETRO_THREADSAFE)
+    std::mutex _out_mtx;
 # endif
 
 # if defined(CHRONOMETRO_WARNINGS)
+    CHRONOMETRO_THREADLOCAL char _wrn_buffer[256];
 # if defined(CHRONOMETRO_THREADSAFE)
-    thread_local char _wrn_buffer[256];
     std::mutex _wrn_mtx;
-#   define CHRONOMETRO_WRN_LOCK std::lock_guard<std::mutex> lock{_backend::_wrn_mtx}
-# else
-    char _log_buffer[256];
-#   define CHRONOMETRO_WRN_LOCK
 # endif
 
 #   define CHRONOMETRO_WARNING(...)                                          \
       [&](const char* caller){                                               \
         sprintf(_backend::_wrn_buffer, __VA_ARGS__);                         \
-        CHRONOMETRO_WRN_LOCK;                                                \
+        CHRONOMETRO_LOCK(_backend::_wrn_mtx);                                \
         Global::wrn << caller << ": " << _backend::_wrn_buffer << std::endl; \
       }(__func__)
 # else
@@ -457,8 +454,8 @@ namespace Chronometro
 
     if ((_lap_format != nullptr) and (_lap_format[0] != '\0'))
     {
-      CHRONOMETRO_OUT_LOCK;
       Global::out << _backend::_format_lap(_iter_duration, _lap_format, _iterations - _iters_left) << std::endl;
+      CHRONOMETRO_LOCK(_backend::_out_mtx);
     }
 
     --_iters_left;
@@ -480,7 +477,7 @@ namespace Chronometro
 
     if (_total_format) CHRONOMETRO_HOT
     {
-      CHRONOMETRO_OUT_LOCK;
+      CHRONOMETRO_LOCK(_backend::_out_mtx);
       Global::out << _backend::_format_total(_duration, _total_format, _iterations ? _iterations : 1) << std::endl;
     }
 
@@ -561,12 +558,12 @@ namespace Chronometro
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef CHRONOMETRO_THREADSAFE
+# undef CHRONOMETRO_THREADLOCAL
+# undef CHRONOMETRO_LOCK
 # undef CHRONOMETRO_HOT
 # undef CHRONOMETRO_COLD
 # undef CHRONOMETRO_NODISCARD
 # undef CHRONOMETRO_NODISCARD_REASON
-# undef CHRONOMETRO_OUT_LOCK
-# undef CHRONOMETRO_WRN_LOCK
 # undef CHRONOMETRO_WARNING
 }
 #endif
