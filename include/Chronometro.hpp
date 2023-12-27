@@ -157,9 +157,7 @@ namespace Chronometro
 
 # if defined(CHRONOMETRO_WARNINGS)
     CHRONOMETRO_THREADLOCAL char _wrn_buffer[256];
-# if defined(CHRONOMETRO_THREADSAFE)
-    std::mutex _wrn_mtx;
-# endif
+    CHRONOMETRO_MAKE_MUTEX(_wrn_mtx);
 
 #   define CHRONOMETRO_WARNING(...)                                          \
       [&](const char* caller){                                               \
