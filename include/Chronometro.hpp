@@ -155,20 +155,6 @@ namespace Chronometro
     CHRONOMETRO_THREADLOCAL char _out_buffer[256];
     CHRONOMETRO_MAKE_MUTEX(_out_mtx);
 
-# if defined(CHRONOMETRO_WARNINGS)
-    CHRONOMETRO_THREADLOCAL char _wrn_buffer[256];
-    CHRONOMETRO_MAKE_MUTEX(_wrn_mtx);
-
-#   define CHRONOMETRO_WARNING(...)                                          \
-      [&](const char* caller){                                               \
-        sprintf(_backend::_wrn_buffer, __VA_ARGS__);                         \
-        CHRONOMETRO_LOCK(_backend::_wrn_mtx);                                \
-        Global::wrn << caller << ": " << _backend::_wrn_buffer << std::endl; \
-      }(__func__)
-# else
-#   define CHRONOMETRO_WARNING(...) void(0)
-# endif
-
     template<Unit>
     struct _unit_helper;
 
