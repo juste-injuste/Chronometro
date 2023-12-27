@@ -53,21 +53,24 @@ int main()
     unsigned inner_loops = 0, outer_loops = 0;
     while (inner_loops < 5)
     {
+      ++outer_loops;
       CHRONOMETRO_ONLY_EVERY_MS(200) // first execution does not wait 200 ms
       {
-        std::cout << "executing inner loop...\n";
         ++inner_loops;
+        std::cout << "executing inner loop...\n"; // measured
       }
-      ++outer_loops;
     }
-    std::cout << "inner loop executions: " << inner_loops << '\n';
-    std::cout << "outer loop executions: " << outer_loops << '\n';
+    std::cout << "inner loop executions: " << inner_loops << '\n'; // measured
+    std::cout << "outer loop executions: " << outer_loops << '\n'; // measured
   }
 
   std::cout << '\n';
   for (auto measurement : Chronometro::Measure(4, "iteration %# took %ms", "iterations took %ms"))
   {
+    measurement.pause(); // not measured
     std::cout << "currently doing iteration #" << measurement.iteration << '\n';
+    measurement.unpause();
+
     sleep_for_ms(100);
   }
 
@@ -82,7 +85,7 @@ int main()
   {
     sleep_for_ms(10);
     measurement.pause();
-    sleep_for_ms(100);
+    sleep_for_ms(100); // not measured
   }
 
   std::cout << '\n';
@@ -90,6 +93,6 @@ int main()
   {
     sleep_for_ms(7);
     iteration.pause();
-    sleep_for_ms(100);
+    sleep_for_ms(100); // not measured
   }
 }
