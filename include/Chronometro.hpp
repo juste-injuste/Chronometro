@@ -59,7 +59,7 @@ execution time of code blocks and more. See the included README.MD file for more
 # define CHRONOMETRO_LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> _lock(MUTEX)
 #else
 # define CHRONOMETRO_THREADLOCAL
-# define CHRONOMETRO_LOCK(MUTEX)
+# define CHRONOMETRO_LOCK(MUTEX) void(0)
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
@@ -385,10 +385,10 @@ namespace Chronometro
     Measure(unsigned iterations) noexcept;
 
     inline // measure iterations with iteration message
-    Measure(unsigned iterations, const char* lap_format) noexcept;
+    Measure(unsigned iterations, const char* iteration_format) noexcept;
 
     inline // measure iterations with iteration message and custom total message
-    Measure(unsigned iterations, const char* lap_format, const char* total_format) noexcept;
+    Measure(unsigned iterations, const char* iteration_format, const char* total_format) noexcept;
 
     inline
     void pause()   noexcept;
@@ -400,10 +400,10 @@ namespace Chronometro
     auto guard()   noexcept -> Stopwatch::Guard;
   private:
     class View;
-    const unsigned _iterations   = 1;
-    unsigned       _iters_left   = _iterations;
-    const char*    _lap_format   = nullptr;
-    const char*    _total_format = "total elapsed time: %ms";
+    const unsigned _iterations  = 1;
+    unsigned       _iters_left  = _iterations;
+    const char*    _iter_format = nullptr;
+    const char*    _tot_format  = "total elapsed time: %ms";
     Stopwatch      _stopwatch;
   public: // iterator stuff
     inline auto begin()                    noexcept -> Measure&;
@@ -539,19 +539,19 @@ namespace Chronometro
 //----------------------------------------------------------------------------------------------------------------------
   Measure::Measure(unsigned iterations) noexcept :
     _iterations(iterations),
-    _total_format((iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _tot_format((iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
-  Measure::Measure(unsigned iterations, const char* lap_format) noexcept :
+  Measure::Measure(unsigned iterations, const char* iteration_format) noexcept :
     _iterations(iterations),
-    _lap_format(lap_format),
-    _total_format((iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _iter_format((iteration_format[0] == '\0') ? nullptr : iteration_format),
+    _tot_format((iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
-  Measure::Measure(unsigned iterations, const char* lap_format, const char* total_format) noexcept :
+  Measure::Measure(unsigned iterations, const char* iteration_format, const char* total_format) noexcept :
     _iterations(iterations),
-    _lap_format(lap_format),
-    _total_format(total_format)
+    _iter_format((iteration_format[0] == '\0') ? nullptr : iteration_format),
+    _tot_format((total_format[0] == '\0') ? nullptr : total_format)
   {}
 
   void Measure::pause() noexcept
@@ -589,10 +589,10 @@ namespace Chronometro
     _stopwatch.pause();
     auto iter_duration = _stopwatch.lap();
 
-    if ((_lap_format != nullptr) and (_lap_format[0] != '\0'))
+    if (_iter_format)
     {
       CHRONOMETRO_LOCK(_backend::_out_mtx);
-      Global::out << _backend::_format_lap(iter_duration, _lap_format, _iterations - _iters_left) << std::endl;
+      Global::out << _backend::_format_lap(iter_duration, _iter_format, _iterations - _iters_left) << std::endl;
     }
 
     --_iters_left;
@@ -615,10 +615,10 @@ namespace Chronometro
 
     auto duration = _stopwatch.split();
 
-    if (_total_format) CHRONOMETRO_HOT
+    if (_tot_format) CHRONOMETRO_HOT
     {
       CHRONOMETRO_LOCK(_backend::_out_mtx);
-      Global::out << _backend::_format_tot(duration, _total_format, _iterations) << std::endl;
+      Global::out << _backend::_format_tot(duration, _tot_format, _iterations) << std::endl;
     }
 
     return false;
