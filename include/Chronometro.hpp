@@ -53,6 +53,7 @@ execution time of code blocks and more. See the included README.MD file for more
 #endif
 
 #if defined(__STDCPP_THREADS__) and not defined(CHRONOMETRO_NOT_THREADSAFE)
+# define CHRONOMETRO_THREADSAFE
 # include <mutex>       // for std::mutex, std::lock_guard
 # define CHRONOMETRO_THREADLOCAL      thread_local
 # define CHRONOMETRO_MAKE_MUTEX(NAME) static std::mutex NAME
@@ -638,6 +639,7 @@ namespace Chronometro
     return ostream << "elapsed time: " << _backend::_time_as_string(time) << std::endl;
   }
 //----------------------------------------------------------------------------------------------------------------------
+# undef CHRONOMETRO_THREADSAFE
 # undef CHRONOMETRO_THREADLOCAL
 # undef CHRONOMETRO_LOCK
 # undef CHRONOMETRO_HOT
