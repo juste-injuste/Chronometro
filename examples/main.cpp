@@ -23,9 +23,9 @@ int main()
   std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
   sleep_for_ms(250);
-  std::cout << stopwatch.split<Chronometro::Unit::ns>(); // prints ~"elapsed time: 250000000 ns"
+  std::cout << stopwatch.split().unit<Chronometro::Unit::us>(); // prints ~"elapsed time: 250000 ns"
   stopwatch.pause();
-  std::cout << stopwatch.split(); // warning issued, prints ~"elapsed time: 250 ms"
+  std::cout << stopwatch.split().decimals<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
 
   std::cout << '\n';
   CHRONOMETRO_MEASURE()
