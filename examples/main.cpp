@@ -60,6 +60,7 @@ int main()
         std::cout << "executing inner loop...\n"; // measured
       }
     }
+    
     std::cout << "inner loop executions: " << inner_loops << '\n'; // measured
     std::cout << "outer loop executions: " << outer_loops << '\n'; // measured
   }
@@ -67,9 +68,10 @@ int main()
   std::cout << '\n';
   for (auto measurement : Chronometro::Measure(4, "iteration %# took %ms", "iterations took %ms"))
   {
-    measurement.pause(); // not measured
-    std::cout << "currently doing iteration #" << measurement.iteration << '\n';
-    measurement.unpause();
+    {
+      auto guard = measurement.guard();
+      std::cout << "currently doing iteration #" << measurement.iteration << '\n';
+    }
 
     sleep_for_ms(100);
   }
@@ -84,6 +86,7 @@ int main()
   for (Chronometro::Measure measurement(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"); measurement; ++measurement)
   {
     sleep_for_ms(10);
+
     measurement.pause();
     sleep_for_ms(100); // not measured
   }
@@ -92,6 +95,7 @@ int main()
   for (auto iteration : Chronometro::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
   {
     sleep_for_ms(7);
+
     iteration.pause();
     sleep_for_ms(100); // not measured
   }
