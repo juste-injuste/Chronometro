@@ -55,11 +55,13 @@ execution time of code blocks and more. See the included README.MD file for more
 #if defined(__STDCPP_THREADS__) and not defined(CHRONOMETRO_NOT_THREADSAFE)
 # define CHRONOMETRO_THREADSAFE
 # include <mutex>       // for std::mutex, std::lock_guard
-# define CHRONOMETRO_THREADLOCAL thread_local
-# define CHRONOMETRO_LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> _lock(MUTEX)
+# define CHRONOMETRO_THREADLOCAL      thread_local
+# define CHRONOMETRO_MAKE_MUTEX(NAME) static std::mutex NAME
+# define CHRONOMETRO_LOCK(MUTEX)      std::lock_guard<decltype(MUTEX)> _lock(MUTEX)
 #else
 # define CHRONOMETRO_THREADLOCAL
-# define CHRONOMETRO_LOCK(MUTEX) void(0)
+# define CHRONOMETRO_MAKE_MUTEX(NAME)
+# define CHRONOMETRO_LOCK(MUTEX)      void(0)
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
@@ -151,9 +153,7 @@ namespace Chronometro
 # endif
 
     CHRONOMETRO_THREADLOCAL char _out_buffer[256];
-# if defined(CHRONOMETRO_THREADSAFE)
-    std::mutex _out_mtx;
-# endif
+    CHRONOMETRO_MAKE_MUTEX(_out_mtx);
 
 # if defined(CHRONOMETRO_WARNINGS)
     CHRONOMETRO_THREADLOCAL char _wrn_buffer[256];
