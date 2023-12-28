@@ -1,5 +1,4 @@
-// #define CHRONOMETRO_WARNINGS
-#include "../include/Chronometro.hpp"
+#include "Chronometro.hpp"
 #include <iostream>
 
 // scuffed sleep function to demonstrate the basic usage of the library
