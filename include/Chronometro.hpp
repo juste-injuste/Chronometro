@@ -404,8 +404,7 @@ namespace Chronometro
     inline
     auto guard()   noexcept -> Stopwatch::Guard;
   private:
-    inline
-    View(unsigned current_iteration, Measure* measurement) noexcept;
+    inline View(unsigned current_iteration, Measure* measurement) noexcept;
     Measure* _measurement;
   friend class Measure;
   };
@@ -431,12 +430,10 @@ namespace Chronometro
   class Stopwatch::Guard final
   {
   private:
-    inline
-    Guard(Stopwatch* stopwatch) noexcept;
+    inline Guard(Stopwatch* stopwatch) noexcept;
     Stopwatch* _stopwatch;
   public:
-    inline
-    ~Guard() noexcept;
+    inline ~Guard() noexcept;
   friend class Stopwatch;
   };
   
