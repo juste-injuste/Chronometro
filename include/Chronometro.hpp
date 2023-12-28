@@ -118,9 +118,23 @@ namespace Chronometro
 //---Chronometro library: backend---------------------------------------------------------------------------------------
   namespace _backend
   {
+// support from clang 12.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 12)
+# if __cplusplus < 202002L
+#   define CHRONOMETRO_HOT                                     \
+    _Pragma("clang diagnostic push")                           \
+    _Pragma("clang diagnostic ignored \"-Wc++20-extensions\"") \
+    [[likely]]                                                 \
+    _Pragma("clang diagnostic pop")
+#   define CHRONOMETRO_COLD                                    \
+    _Pragma("clang diagnostic push")                           \
+    _Pragma("clang diagnostic ignored \"-Wc++20-extensions\"") \
+    [[unlikely]]                                               \
+    _Pragma("clang diagnostic pop")
+# else
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
+# endif
 # elif defined(__GNUC__) and (__GNUC__ >= 10)
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
@@ -129,20 +143,38 @@ namespace Chronometro
 #   define CHRONOMETRO_COLD
 # endif
 
+// support from clang 3.9.0 and GCC 7.1 onward
 # if defined(__clang__) and ((__clang_major__ > 3) or ((__clang_major__ == 3) and (__clang_minor__ >= 9)))
+# if __cplusplus < 201703L
+#   define CHRONOMETRO_NODISCARD                               \
+    _Pragma("clang diagnostic push")                           \
+    _Pragma("clang diagnostic ignored \"-Wc++1z-extensions\"") \
+    [[nodiscard]]                                              \
+    _Pragma("clang diagnostic pop")
+# else
 #   define CHRONOMETRO_NODISCARD [[nodiscard]]
+# endif
 # elif defined(__GNUC__) and (__GNUC__ >= 7)
 #   define CHRONOMETRO_NODISCARD [[nodiscard]]
 # else
 #   define CHRONOMETRO_NODISCARD
 # endif
 
+// support from clang 10.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 10)
+# if __cplusplus < 202002L
+#   define CHRONOMETRO_NODISCARD_REASON(reason)                \
+    _Pragma("clang diagnostic push")                           \
+    _Pragma("clang diagnostic ignored \"-Wc++20-extensions\"") \
+    [[nodiscard(reason)]]                                      \
+    _Pragma("clang diagnostic pop")
+# else
 #   define CHRONOMETRO_NODISCARD_REASON(reason) [[nodiscard(reason)]]
+# endif
 # elif defined(__GNUC__) and (__GNUC__ >= 10)
 #   define CHRONOMETRO_NODISCARD_REASON(reason) [[nodiscard(reason)]]
 # else
-#   define CHRONOMETRO_NODISCARD_REASON(reason)
+#   define CHRONOMETRO_NODISCARD_REASON(reason) CHRONOMETRO_NODISCARD
 # endif
 
 #if defined(CHRONOMETRO_THREADSAFE)
