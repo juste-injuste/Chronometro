@@ -202,7 +202,7 @@ namespace Chronometro
       static constexpr double      factor = 3600000000000.0;
     };
 
-    template<Unit U, unsigned D> static
+    template<Unit U, unsigned D> inline
     std::string _time_as_string(Time<U, D> time)
     {
       static_assert(D <= 3, "too many decimals requested");
@@ -216,7 +216,7 @@ namespace Chronometro
       return buffer;
     }
 
-    template<unsigned D> static
+    template<unsigned D> inline
     std::string _time_as_string(Time<Unit::automatic, D> time)
     {
       // 10 h < duration
@@ -253,7 +253,7 @@ namespace Chronometro
       return _time_as_string(Time<Unit::ns, D>{time.nanoseconds});
     }
 
-    template<Unit U, unsigned D> static
+    template<Unit U, unsigned D> inline
     std::string _format_time(Time<U, D> time, std::string&& format) noexcept
     {
       static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
@@ -272,7 +272,7 @@ namespace Chronometro
       return std::move(format);
     }
 
-    template<Unit U, unsigned D> static
+    template<Unit U, unsigned D> inline
     std::string _format_lap(Time<U, D> time, std::string&& format, unsigned iteration) noexcept
     {
       auto position = format.find("%#");
@@ -285,7 +285,7 @@ namespace Chronometro
       return _format_time(time, std::move(format));
     }
 
-    template<Unit U, unsigned D> static
+    template<Unit U, unsigned D> inline
     std::string _format_tot(Time<U, D> time, std::string&& format, unsigned iterations) noexcept
     {
       format = _format_time(time, std::move(format));
