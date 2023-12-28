@@ -99,13 +99,13 @@ namespace Chronometro
 # define CHRONOMETRO_ONLY_EVERY_MS(N)
 
   // print time to ostream
-  template<Unit U, unsigned D>
+  template<Unit U, unsigned D> inline
   std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept;
 
   namespace Global
   {
-    std::ostream out{std::cout.rdbuf()}; // output ostream
-    std::ostream wrn{std::clog.rdbuf()}; // warning ostream
+    static std::ostream out{std::cout.rdbuf()}; // output ostream
+    static std::ostream wrn{std::clog.rdbuf()}; // warning ostream
   }
 
   namespace Version
@@ -155,7 +155,6 @@ namespace Chronometro
 # define CHRONOMETRO_LOCK(MUTEX)      void(0)
 #endif
 
-    CHRONOMETRO_THREADLOCAL char _out_buffer[256];
     CHRONOMETRO_MAKE_MUTEX(_out_mtx);
 
     template<Unit>
@@ -203,7 +202,7 @@ namespace Chronometro
       static constexpr double      factor = 3600000000000.0;
     };
 
-    template<Unit U, unsigned D>
+    template<Unit U, unsigned D> static
     std::string _time_as_string(Time<U, D> time)
     {
       static_assert(D <= 3, "too many decimals requested");
@@ -217,7 +216,7 @@ namespace Chronometro
       return buffer;
     }
 
-    template<unsigned D>
+    template<unsigned D> static
     std::string _time_as_string(Time<Unit::automatic, D> time)
     {
       // 10 h < duration
@@ -254,7 +253,7 @@ namespace Chronometro
       return _time_as_string(Time<Unit::ns, D>{time.nanoseconds});
     }
 
-    template<Unit U, unsigned D>
+    template<Unit U, unsigned D> static
     std::string _format_time(Time<U, D> time, std::string&& format) noexcept
     {
       static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
@@ -273,7 +272,7 @@ namespace Chronometro
       return std::move(format);
     }
 
-    template<Unit U, unsigned D>
+    template<Unit U, unsigned D> static
     std::string _format_lap(Time<U, D> time, std::string&& format, unsigned iteration) noexcept
     {
       auto position = format.find("%#");
@@ -286,7 +285,7 @@ namespace Chronometro
       return _format_time(time, std::move(format));
     }
 
-    template<Unit U, unsigned D>
+    template<Unit U, unsigned D> static
     std::string _format_tot(Time<U, D> time, std::string&& format, unsigned iterations) noexcept
     {
       format = _format_time(time, std::move(format));
@@ -352,16 +351,6 @@ namespace Chronometro
     Clock::time_point        _previous     = Clock::now();
   };
 
-  class Stopwatch::Guard final
-  {
-  private:
-    Guard(Stopwatch* stopwatch) noexcept;
-    Stopwatch* _stopwatch;
-  public:
-    ~Guard() noexcept;
-  friend class Stopwatch;
-  };
-
   class Measure final
   {
   public:
@@ -415,6 +404,7 @@ namespace Chronometro
     inline
     auto guard()   noexcept -> Stopwatch::Guard;
   private:
+    inline
     View(unsigned current_iteration, Measure* measurement) noexcept;
     Measure* _measurement;
   friend class Measure;
@@ -437,6 +427,29 @@ namespace Chronometro
       }                                                               \
       return false;                                                   \
     }())
+//----------------------------------------------------------------------------------------------------------------------
+  class Stopwatch::Guard final
+  {
+  private:
+    inline
+    Guard(Stopwatch* stopwatch) noexcept;
+    Stopwatch* _stopwatch;
+  public:
+    inline
+    ~Guard() noexcept;
+  friend class Stopwatch;
+  };
+  
+  Stopwatch::Guard::Guard(Stopwatch* stopwatch) noexcept :
+    _stopwatch(stopwatch)
+  {
+    _stopwatch->pause();
+  }
+
+  Stopwatch::Guard::~Guard() noexcept
+  {
+    _stopwatch->unpause();
+  }
 //----------------------------------------------------------------------------------------------------------------------
   auto Stopwatch::lap() noexcept -> Time<>
   {
@@ -511,17 +524,6 @@ namespace Chronometro
   auto Stopwatch::guard() noexcept -> Stopwatch::Guard
   {
     return Guard(this);
-  }
-//----------------------------------------------------------------------------------------------------------------------
-  Stopwatch::Guard::Guard(Stopwatch* stopwatch) noexcept :
-    _stopwatch(stopwatch)
-  {
-    _stopwatch->pause();
-  }
-
-  Stopwatch::Guard::~Guard() noexcept
-  {
-    _stopwatch->unpause();
   }
 //----------------------------------------------------------------------------------------------------------------------
   Measure::Measure(unsigned iterations) noexcept :
@@ -636,7 +638,7 @@ namespace Chronometro
     return _measurement->guard();
   }
 //----------------------------------------------------------------------------------------------------------------------
-  template<Unit U, unsigned D> inline
+  template<Unit U, unsigned D>
   std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept
   {
     return ostream << "elapsed time: " << _backend::_time_as_string(time) << std::endl;
