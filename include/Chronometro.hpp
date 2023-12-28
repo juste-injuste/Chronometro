@@ -145,12 +145,12 @@ namespace Chronometro
 // support from clang 3.9.0 and GCC 7.1 onward
 # if defined(__clang__) and ((__clang_major__ > 3) or ((__clang_major__ == 3) and (__clang_minor__ >= 9)))
 # if __cplusplus < 201703L
-#   define CHRONOMETRO_NODISCARD    CHRONOMETRO_CLANG_IGNORE("-Wc++1z-extensions", [[nodiscard]])                               \
+#   define CHRONOMETRO_NODISCARD CHRONOMETRO_CLANG_IGNORE("-Wc++1z-extensions", [[nodiscard]])
 # else
-#   define CHRONOMETRO_NODISCARD    [[nodiscard]]
+#   define CHRONOMETRO_NODISCARD [[nodiscard]]
 # endif
 # elif defined(__GNUC__) and (__GNUC__ >= 7)
-#   define CHRONOMETRO_NODISCARD    [[nodiscard]]
+#   define CHRONOMETRO_NODISCARD [[nodiscard]]
 # else
 #   define CHRONOMETRO_NODISCARD
 # endif
