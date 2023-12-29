@@ -119,17 +119,27 @@ namespace Chronometro
   namespace _backend
   {
 #   define CHRONOMETRO_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
-#   define CHRONOMETRO_CLANG_IGNORE(WARNING, ...)          \
+# if defined(__clang__)
+#   define CHRONOMETRO_IGNORE(WARNING, ...)                \
       CHRONOMETRO_PRAGMA(clang diagnostic push)            \
       CHRONOMETRO_PRAGMA(clang diagnostic ignored WARNING) \
       __VA_ARGS__                                          \
       CHRONOMETRO_PRAGMA(clang diagnostic pop)
+# elif defined(__GNUC__)
+#   define CHRONOMETRO_IGNORE(WARNING, ...)              \
+      CHRONOMETRO_PRAGMA(GCC diagnostic push)            \
+      CHRONOMETRO_PRAGMA(GCC diagnostic ignored WARNING) \
+      __VA_ARGS__                                        \
+      CHRONOMETRO_PRAGMA(GCC diagnostic pop)
+# else
+#   define CHRONOMETRO_IGNORE(WARNING, ...)
+#endif
 
 // support from clang 12.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 12)
 # if __cplusplus < 202002L
-#   define CHRONOMETRO_HOT  CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[likely]])
-#   define CHRONOMETRO_COLD CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[unlikely]])
+#   define CHRONOMETRO_HOT  CHRONOMETRO_IGNORE("-Wc++20-extensions", [[likely]])
+#   define CHRONOMETRO_COLD CHRONOMETRO_IGNORE("-Wc++20-extensions", [[unlikely]])
 # else
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
@@ -142,15 +152,11 @@ namespace Chronometro
 #   define CHRONOMETRO_COLD
 # endif
 
-// support from clang 3.9.0 and GCC 7.1 onward
-# if defined(__clang__) and ((__clang_major__ > 3) or ((__clang_major__ == 3) and (__clang_minor__ >= 9)))
-# if __cplusplus < 201703L
-#   define CHRONOMETRO_NODISCARD CHRONOMETRO_CLANG_IGNORE("-Wc++1z-extensions", [[nodiscard]])
-# else
-#   define CHRONOMETRO_NODISCARD [[nodiscard]]
-# endif
-# elif defined(__GNUC__) and (__GNUC__ >= 7)
-#   define CHRONOMETRO_NODISCARD [[nodiscard]]
+// support from clang 3.9.0 and GCC 5.1 onward
+# if defined(__clang__)
+#   define CHRONOMETRO_NODISCARD __attribute__((warn_unused_result))
+# elif defined(__GNUC__)
+#   define CHRONOMETRO_NODISCARD __attribute__((warn_unused_result))
 # else
 #   define CHRONOMETRO_NODISCARD
 # endif
@@ -158,7 +164,7 @@ namespace Chronometro
 // support from clang 10.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 10)
 # if __cplusplus < 202002L
-#   define CHRONOMETRO_NODISCARD_REASON(REASON) CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
+#   define CHRONOMETRO_NODISCARD_REASON(REASON) CHRONOMETRO_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
 # else
 #   define CHRONOMETRO_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
 # endif
@@ -664,16 +670,16 @@ namespace Chronometro
   {
     return ostream << "elapsed time: " << _backend::_time_as_cstring(time) << std::endl;
   }
+}
 //----------------------------------------------------------------------------------------------------------------------
 # undef CHRONOMETRO_PRAGMA
-# undef CHRONOMETRO_CLANG_IGNORE
-# undef CHRONOMETRO_THREADSAFE
-# undef CHRONOMETRO_THREADLOCAL
-# undef CHRONOMETRO_LOCK
+# undef CHRONOMETRO_IGNORE
 # undef CHRONOMETRO_HOT
 # undef CHRONOMETRO_COLD
 # undef CHRONOMETRO_NODISCARD
 # undef CHRONOMETRO_NODISCARD_REASON
-# undef CHRONOMETRO_WARNING
-}
+# undef CHRONOMETRO_THREADSAFE
+# undef CHRONOMETRO_THREADLOCAL
+# undef CHRONOMETRO_MAKE_MUTEX
+# undef CHRONOMETRO_LOCK
 #endif
