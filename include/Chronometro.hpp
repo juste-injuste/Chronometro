@@ -228,7 +228,7 @@ namespace Chronometro
     template<Unit U, unsigned D> inline
     std::string _time_as_string(Time<U, D> time)
     {
-      static_assert(D <= 3, "too many decimals requested");
+      static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
       static const char* format[] = {"%.0f %s", "%.1f %s", "%.2f %s", "%.3f %s"};
 
       static CHRONOMETRO_THREADLOCAL char buffer[32];
@@ -437,17 +437,17 @@ namespace Chronometro
     for (Chronometro::Measure _measurement{__VA_ARGS__}; _measurement; ++_measurement)
 
 # undef  CHRONOMETRO_ONLY_EVERY_MS
-# define CHRONOMETRO_ONLY_EVERY_MS(N)                                 \
-    if ([]{                                                           \
-      static_assert((N) > 0, "N must be a non-zero positive number"); \
-      static Chronometro::Clock::time_point _previous = {};           \
-      auto _target = std::chrono::nanoseconds{(N)*1000000};           \
-      if ((Chronometro::Clock::now() - _previous) > _target)          \
-      {                                                               \
-        _previous = Chronometro::Clock::now();                        \
-        return true;                                                  \
-      }                                                               \
-      return false;                                                   \
+# define CHRONOMETRO_ONLY_EVERY_MS(N)                                                            \
+    if ([]{                                                                                      \
+      static_assert((N) > 0, "CHRONOMETRO_ONLY_EVERY_MS: N must be a non-zero positive number"); \
+      static Chronometro::Clock::time_point _previous = {};                                      \
+      auto _target = std::chrono::nanoseconds{(N)*1000000};                                      \
+      if ((Chronometro::Clock::now() - _previous) > _target)                                     \
+      {                                                                                          \
+        _previous = Chronometro::Clock::now();                                                   \
+        return true;                                                                             \
+      }                                                                                          \
+      return false;                                                                              \
     }())
 //----------------------------------------------------------------------------------------------------------------------
   class Stopwatch::Guard final
