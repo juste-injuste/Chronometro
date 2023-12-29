@@ -389,13 +389,13 @@ namespace Chronometro
     inline // measure iterations with iteration message and custom total message
     Measure(unsigned iterations, const char* iteration_format, const char* total_format) noexcept;
 
-    inline
+    inline // pause measurement
     void pause()   noexcept;
 
-    inline
+    inline // unpause measurement
     void unpause() noexcept;
 
-    inline
+    inline // scoped pause/unpause of measurement
     auto guard()   noexcept -> Stopwatch::Guard;
   private:
     class View;
@@ -416,15 +416,16 @@ namespace Chronometro
   class Measure::View
   {
   public:
+    // current measurement iteration
     const unsigned iteration;
 
-    inline
+    inline // pause measurement
     void pause()   noexcept;
 
-    inline
+    inline // unpause measurement
     void unpause() noexcept;
 
-    inline
+    inline // scoped pause/unpause of measurement
     auto guard()   noexcept -> Stopwatch::Guard;
   private:
     inline View(unsigned current_iteration, Measure* measurement) noexcept;
