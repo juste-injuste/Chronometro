@@ -226,7 +226,7 @@ namespace Chronometro
     };
 
     template<Unit U, unsigned D> inline
-    std::string _time_as_string(Time<U, D> time)
+    const char* _time_as_cstring(Time<U, D> time)
     {
       static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
       static const char* format[] = {"%.0f %s", "%.1f %s", "%.2f %s", "%.3f %s"};
@@ -240,40 +240,40 @@ namespace Chronometro
     }
 
     template<unsigned D> inline
-    std::string _time_as_string(Time<Unit::automatic, D> time)
+    const char* _time_as_cstring(Time<Unit::automatic, D> time)
     {
       // 10 h < duration
       if (time.nanoseconds.count() > 36000000000000) CHRONOMETRO_COLD
       {
-        return _time_as_string(Time<Unit::h, D>{time.nanoseconds});
+        return _time_as_cstring(Time<Unit::h, D>{time.nanoseconds});
       }
 
       // 10 min < duration <= 10 h
       if (time.nanoseconds.count() > 600000000000) CHRONOMETRO_COLD
       {
-        return _time_as_string(Time<Unit::min, D>{time.nanoseconds});
+        return _time_as_cstring(Time<Unit::min, D>{time.nanoseconds});
       }
 
       // 10 s < duration <= 10 m
       if (time.nanoseconds.count() > 10000000000)
       {
-        return _time_as_string(Time<Unit::s, D>{time.nanoseconds});
+        return _time_as_cstring(Time<Unit::s, D>{time.nanoseconds});
       }
 
       // 10 ms < duration <= 10 s
       if (time.nanoseconds.count() > 10000000)
       {
-        return _time_as_string(Time<Unit::ms, D>{time.nanoseconds});
+        return _time_as_cstring(Time<Unit::ms, D>{time.nanoseconds});
       }
 
       // 10 us < duration <= 10 ms
       if (time.nanoseconds.count() > 10000)
       {
-        return _time_as_string(Time<Unit::us, D>{time.nanoseconds});
+        return _time_as_cstring(Time<Unit::us, D>{time.nanoseconds});
       }
 
       // duration <= 10 us
-      return _time_as_string(Time<Unit::ns, D>{time.nanoseconds});
+      return _time_as_cstring(Time<Unit::ns, D>{time.nanoseconds});
     }
 
     template<Unit U, unsigned D> inline
@@ -287,7 +287,7 @@ namespace Chronometro
         auto  position             = format.rfind(unit_specifier);
         while (position != std::string::npos)
         {
-          format.replace(position, unit_specifier.length(), _time_as_string(time));
+          format.replace(position, unit_specifier.length(), _time_as_cstring(time));
           position = format.find(unit_specifier);
         }
       }
@@ -661,7 +661,7 @@ namespace Chronometro
   template<Unit U, unsigned D>
   std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept
   {
-    return ostream << "elapsed time: " << _backend::_time_as_string(time) << std::endl;
+    return ostream << "elapsed time: " << _backend::_time_as_cstring(time) << std::endl;
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef CHRONOMETRO_PRAGMA
