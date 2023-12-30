@@ -99,7 +99,8 @@ namespace Chronometro
 # define CHRONOMETRO_ONLY_EVERY_MS(N)
 
   // print time to ostream
-  template<Unit U, unsigned D> inline
+  template<Unit U, unsigned D>
+  inline
   std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept;
 
   namespace Global
@@ -118,28 +119,20 @@ namespace Chronometro
 //---Chronometro library: backend---------------------------------------------------------------------------------------
   namespace _backend
   {
-#   define CHRONOMETRO_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
 # if defined(__clang__)
-#   define CHRONOMETRO_IGNORE(WARNING, ...)                \
+#   define CHRONOMETRO_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
+#   define CHRONOMETRO_CLANG_IGNORE(WARNING, ...)          \
       CHRONOMETRO_PRAGMA(clang diagnostic push)            \
       CHRONOMETRO_PRAGMA(clang diagnostic ignored WARNING) \
       __VA_ARGS__                                          \
       CHRONOMETRO_PRAGMA(clang diagnostic pop)
-# elif defined(__GNUC__)
-#   define CHRONOMETRO_IGNORE(WARNING, ...)              \
-      CHRONOMETRO_PRAGMA(GCC diagnostic push)            \
-      CHRONOMETRO_PRAGMA(GCC diagnostic ignored WARNING) \
-      __VA_ARGS__                                        \
-      CHRONOMETRO_PRAGMA(GCC diagnostic pop)
-# else
-#   define CHRONOMETRO_IGNORE(WARNING, ...)
 #endif
 
 // support from clang 12.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 12)
 # if __cplusplus < 202002L
-#   define CHRONOMETRO_HOT  CHRONOMETRO_IGNORE("-Wc++20-extensions", [[likely]])
-#   define CHRONOMETRO_COLD CHRONOMETRO_IGNORE("-Wc++20-extensions", [[unlikely]])
+#   define CHRONOMETRO_HOT  CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[likely]])
+#   define CHRONOMETRO_COLD CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[unlikely]])
 # else
 #   define CHRONOMETRO_HOT  [[likely]]
 #   define CHRONOMETRO_COLD [[unlikely]]
@@ -164,7 +157,7 @@ namespace Chronometro
 // support from clang 10.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 10)
 # if __cplusplus < 202002L
-#   define CHRONOMETRO_NODISCARD_REASON(REASON) CHRONOMETRO_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
+#   define CHRONOMETRO_NODISCARD_REASON(REASON) CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
 # else
 #   define CHRONOMETRO_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
 # endif
@@ -231,7 +224,8 @@ namespace Chronometro
       static constexpr double      factor = 3600000000000.0;
     };
 
-    template<Unit U, unsigned D> inline
+    template<Unit U, unsigned D>
+    inline
     const char* _time_as_cstring(Time<U, D> time)
     {
       static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
@@ -245,7 +239,8 @@ namespace Chronometro
       return buffer;
     }
 
-    template<unsigned D> inline
+    template<unsigned D>
+    inline
     const char* _time_as_cstring(Time<Unit::automatic, D> time)
     {
       // 10 h < duration
@@ -282,7 +277,8 @@ namespace Chronometro
       return _time_as_cstring(Time<Unit::ns, D>{time.nanoseconds});
     }
 
-    template<Unit U, unsigned D> inline
+    template<Unit U, unsigned D>
+    inline
     std::string _format_time(Time<U, D> time, std::string&& format) noexcept
     {
       static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
@@ -301,7 +297,8 @@ namespace Chronometro
       return std::move(format);
     }
 
-    template<Unit U, unsigned D> inline
+    template<Unit U, unsigned D>
+    inline
     std::string _format_lap(Time<U, D> time, std::string&& format, unsigned iteration) noexcept
     {
       auto position = format.find("%#");
@@ -314,7 +311,8 @@ namespace Chronometro
       return _format_time(time, std::move(format));
     }
 
-    template<Unit U, unsigned D> inline
+    template<Unit U, unsigned D>
+    inline
     std::string _format_tot(Time<U, D> time, std::string&& format, unsigned iterations) noexcept
     {
       format = _format_time(time, std::move(format));
@@ -351,7 +349,7 @@ namespace Chronometro
   class Stopwatch final
   {
   public:
-    // scoped pause/unpause
+    // scoped pause/unpause (RAII)
     class Guard;
 
     CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
@@ -673,7 +671,7 @@ namespace Chronometro
 }
 //----------------------------------------------------------------------------------------------------------------------
 # undef CHRONOMETRO_PRAGMA
-# undef CHRONOMETRO_IGNORE
+# undef CHRONOMETRO_CLANG_IGNORE
 # undef CHRONOMETRO_HOT
 # undef CHRONOMETRO_COLD
 # undef CHRONOMETRO_NODISCARD
