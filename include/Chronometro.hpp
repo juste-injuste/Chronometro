@@ -345,13 +345,11 @@ namespace Chronometro
     template<unsigned D_>
     Time<U, D_> decimals() noexcept { return reinterpret_cast<Time<U, D_>&>(*this); }
   };
-  
+
   class Stopwatch
   {
+  private: class Guard;
   public:
-    // scoped pause/unpause (RAII)
-    class Guard;
-
     CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time
     auto lap()     noexcept -> Time<>;
@@ -369,7 +367,7 @@ namespace Chronometro
     inline // unpause time measurement
     void unpause() noexcept;
 
-    inline // scoped pause/unpause
+    inline // scoped pause/unpause (RAII)
     auto guard()   noexcept -> Guard;
   private:
     bool                     _is_paused    = false;
@@ -400,7 +398,7 @@ namespace Chronometro
     void unpause() noexcept;
 
     inline // scoped pause/unpause of measurement
-    auto guard()   noexcept -> Stopwatch::Guard;
+    auto guard()   noexcept -> decltype(Stopwatch().guard()); // Stopwatch::Guard;
   private:
     class View;
     const unsigned _iterations  = 1;
@@ -430,7 +428,7 @@ namespace Chronometro
     void unpause() noexcept;
 
     inline // scoped pause/unpause of measurement
-    auto guard()   noexcept -> Stopwatch::Guard;
+    auto guard()   noexcept -> decltype(Stopwatch().guard());
   private:
     inline View(unsigned current_iteration, Measure* measurement) noexcept;
     Measure* const _measurement;
@@ -458,23 +456,20 @@ namespace Chronometro
   class Stopwatch::Guard final
   {
   private:
-    inline Guard(Stopwatch* stopwatch) noexcept;
-    Stopwatch* _stopwatch;
+    Stopwatch* const _stopwatch;
+
+    Guard(Stopwatch* stopwatch) noexcept :
+      _stopwatch(stopwatch)
+    {
+      _stopwatch->pause();
+    }
   public:
-    inline ~Guard() noexcept;
+    ~Guard() noexcept
+    {
+      _stopwatch->unpause();
+    }
   friend class Stopwatch;
   };
-  
-  Stopwatch::Guard::Guard(Stopwatch* stopwatch) noexcept :
-    _stopwatch(stopwatch)
-  {
-    _stopwatch->pause();
-  }
-
-  Stopwatch::Guard::~Guard() noexcept
-  {
-    _stopwatch->unpause();
-  }
 //----------------------------------------------------------------------------------------------------------------------
   auto Stopwatch::lap() noexcept -> Time<>
   {
@@ -653,12 +648,12 @@ namespace Chronometro
     _measurement->unpause();
   }
 
-  auto Measure::guard() noexcept -> Stopwatch::Guard
+  auto Measure::guard() noexcept -> decltype(Stopwatch().guard())
   {
     return _stopwatch.guard();
   }
 
-  auto Measure::View::guard() noexcept -> Stopwatch::Guard
+  auto Measure::View::guard() noexcept -> decltype(Stopwatch().guard())
   {
     return _measurement->guard();
   }
