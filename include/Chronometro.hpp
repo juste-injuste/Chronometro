@@ -334,7 +334,7 @@ namespace Chronometro
   }
 //----------------------------------------------------------------------------------------------------------------------
   template<Unit U = Unit::ms, unsigned D = 0>
-  class Time final
+  class Time
   {
   public:
     std::chrono::nanoseconds nanoseconds;
@@ -346,7 +346,7 @@ namespace Chronometro
     Time<U, D_> decimals() noexcept { return reinterpret_cast<Time<U, D_>&>(*this); }
   };
   
-  class Stopwatch final
+  class Stopwatch
   {
   public:
     // scoped pause/unpause (RAII)
@@ -378,7 +378,7 @@ namespace Chronometro
     Clock::time_point        _previous     = Clock::now();
   };
 
-  class Measure final
+  class Measure
   {
   public:
     // measure one iteration
@@ -417,7 +417,7 @@ namespace Chronometro
     inline      operator bool()            noexcept;
   };
 
-  class Measure::View
+  class Measure::View final
   {
   public:
     // current measurement iteration
@@ -433,7 +433,7 @@ namespace Chronometro
     auto guard()   noexcept -> Stopwatch::Guard;
   private:
     inline View(unsigned current_iteration, Measure* measurement) noexcept;
-    Measure* _measurement;
+    Measure* const _measurement;
   friend class Measure;
   };
 
