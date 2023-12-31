@@ -13,18 +13,18 @@ int main()
   Chronometro::Stopwatch stopwatch;
   sleep_for_ms(30);
   stopwatch.pause();
-  sleep_for_ms(500);              // not measured by the stopwatch
+  sleep_for_ms(500); // not measured by the stopwatch
   stopwatch.unpause();
   sleep_for_ms(70);
-  std::cout << stopwatch.lap();   // prints ~"elapsed time: 100 ms"
+  std::cout << stopwatch.lap<3, Chronometro::Unit::us>(); // prints ~"elapsed time: 100000.000 us"
   sleep_for_ms(80);
   std::cout << stopwatch.lap();   // prints ~"elapsed time: 80 ms"
   std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
   sleep_for_ms(250);
-  std::cout << stopwatch.split().unit<Chronometro::Unit::us>(); // prints ~"elapsed time: 250000 ns"
+  std::cout << stopwatch.split().format<Chronometro::Unit::us>(); // prints ~"elapsed time: 250000 ns"
   stopwatch.pause();
-  std::cout << stopwatch.split().decimals<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
+  std::cout << stopwatch.split().format<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
 
   std::cout << '\n';
   CHRONOMETRO_MEASURE()

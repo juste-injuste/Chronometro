@@ -182,47 +182,22 @@ namespace Chronometro
     template<Unit>
     struct _unit_helper;
 
-    template<>
-    struct _unit_helper<Unit::ns>
-    {
-      static constexpr const char* label = "ns";
-      static constexpr double      factor = 1.0;
-    };
+#   define CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(UNIT, LABEL, FACTOR) \
+      template<>                                                            \
+      struct _unit_helper<UNIT>                                             \
+      {                                                                     \
+        static constexpr const char* label  = LABEL;                        \
+        static constexpr double      factor = FACTOR;                       \
+      }
+    
+    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ns,  "ns",  1);
+    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::us,  "us",  1000);
+    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ms,  "ms",  1000000);
+    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::s,   "s",   1000000000);
+    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::min, "min", 60000000000);
+    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::h,   "h",   3600000000000);
 
-    template<>
-    struct _unit_helper<Unit::us>
-    {
-      static constexpr const char* label = "us";
-      static constexpr double      factor = 1000.0;
-    };
-
-    template<>
-    struct _unit_helper<Unit::ms>
-    {
-      static constexpr const char* label = "ms";
-      static constexpr double      factor = 1000000.0;
-    };
-
-    template<>
-    struct _unit_helper<Unit::s>
-    {
-      static constexpr const char* label = "s";
-      static constexpr double      factor = 1000000000.0;
-    };
-
-    template<>
-    struct _unit_helper<Unit::min>
-    {
-      static constexpr const char* label = "min";
-      static constexpr double      factor = 60000000000.0;
-    };
-
-    template<>
-    struct _unit_helper<Unit::h>
-    {
-      static constexpr const char* label = "h";
-      static constexpr double      factor = 3600000000000.0;
-    };
+#   undef CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION
 
     template<Unit U, unsigned D>
     inline
@@ -333,17 +308,19 @@ namespace Chronometro
     }
   }
 //----------------------------------------------------------------------------------------------------------------------
-  template<Unit U = Unit::ms, unsigned D = 0>
+  template<Unit U, unsigned D>
   class Time
   {
   public:
     std::chrono::nanoseconds nanoseconds;
 
-    template<Unit U_>
-    Time<U_, D> unit()     noexcept { return reinterpret_cast<Time<U_, D>&>(*this); }
+    template<Unit U_, unsigned D_ = D>
+    inline // change format
+    auto format() noexcept -> Time<U_, D_>;
 
-    template<unsigned D_>
-    Time<U, D_> decimals() noexcept { return reinterpret_cast<Time<U, D_>&>(*this); }
+    template<unsigned D_, Unit U_ = U>
+    inline // change format
+    auto format() noexcept -> Time<U_, D_>;
   };
 
   class Stopwatch
@@ -352,23 +329,44 @@ namespace Chronometro
   public:
     CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time
-    auto lap()     noexcept -> Time<>;
+    auto lap() noexcept -> Time<Unit::automatic, 0>;
 
     CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
-    auto split()   noexcept -> Time<>;
+    auto split() noexcept -> Time<Unit::automatic, 0>;
 
     inline // reset measured times
-    void reset()   noexcept;
+    void reset() noexcept;
 
     inline // pause time measurement
-    void pause()   noexcept;
+    void pause() noexcept;
 
     inline // unpause time measurement
     void unpause() noexcept;
 
     inline // scoped pause/unpause (RAII)
-    auto guard()   noexcept -> Guard;
+    auto guard() noexcept -> Guard;
+
+  public: // extra overloads to make formatting easier
+    template<Unit U, unsigned D = 0>
+    CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
+    inline // display and return lap time with custom format
+    auto lap() noexcept -> Time<U, D>;
+
+    template<unsigned D, Unit U = Unit::automatic>
+    CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
+    inline // display and return lap time with custom format
+    auto lap() noexcept -> Time<U, D>;
+
+    template<Unit U, unsigned D = 0>
+    CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
+    inline // display and return split time with custom format
+    auto split() noexcept -> Time<U, D>;
+
+    template<unsigned D, Unit U = Unit::automatic>
+    CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
+    inline // display and return split time
+    auto split() noexcept -> Time<U, D>;
   private:
     bool                     _is_paused    = false;
     std::chrono::nanoseconds _duration_tot = {};
@@ -392,13 +390,13 @@ namespace Chronometro
     Measure(unsigned iterations, const char* iteration_format, const char* total_format) noexcept;
 
     inline // pause measurement
-    void pause()   noexcept;
+    void pause() noexcept;
 
     inline // unpause measurement
     void unpause() noexcept;
 
     inline // scoped pause/unpause of measurement
-    auto guard()   noexcept -> decltype(Stopwatch().guard()); // Stopwatch::Guard;
+    auto guard() noexcept -> decltype(Stopwatch().guard());
   private:
     class View;
     const unsigned _iterations  = 1;
@@ -422,13 +420,13 @@ namespace Chronometro
     const unsigned iteration;
 
     inline // pause measurement
-    void pause()   noexcept;
+    void pause() noexcept;
 
     inline // unpause measurement
     void unpause() noexcept;
 
     inline // scoped pause/unpause of measurement
-    auto guard()   noexcept -> decltype(Stopwatch().guard());
+    auto guard() noexcept -> decltype(Stopwatch().guard());
   private:
     inline View(unsigned current_iteration, Measure* measurement) noexcept;
     Measure* const _measurement;
@@ -471,7 +469,25 @@ namespace Chronometro
   friend class Stopwatch;
   };
 //----------------------------------------------------------------------------------------------------------------------
-  auto Stopwatch::lap() noexcept -> Time<>
+  template<Unit U, unsigned D> template<Unit U_, unsigned D_>
+  auto Time<U, D>::format() noexcept -> Time<U_, D_>
+  {
+    return reinterpret_cast<Time<U_, D_>&>(*this);
+  }
+
+  template<Unit U, unsigned D> template<unsigned D_, Unit U_>
+  auto Time<U, D>::format() noexcept -> Time<U_, D_>
+  {
+    return reinterpret_cast<Time<U_, D_>&>(*this);
+  }
+//----------------------------------------------------------------------------------------------------------------------
+  auto Stopwatch::lap() noexcept -> Time<Unit::automatic, 0>
+  {
+    return lap<Unit::automatic, 0>();
+  }
+  
+  template<Unit U, unsigned D>
+  auto Stopwatch::lap() noexcept -> Time<U, D>
   {
     auto now = Clock::now();
 
@@ -486,10 +502,22 @@ namespace Chronometro
       _previous = Clock::now(); // start measurement from here
     }
 
-    return Time<>{lap_duration};
+    return Time<U, D>{lap_duration};
   }
 
-  auto Stopwatch::split() noexcept -> Time<>
+  template<unsigned D, Unit U>
+  auto Stopwatch::lap() noexcept -> Time<U, D>
+  {
+    return lap<U, D>();
+  }
+
+  auto Stopwatch::split() noexcept -> Time<Unit::automatic, 0>
+  {
+    return split<Unit::automatic, 0>();
+  }
+
+  template<Unit U, unsigned D>
+  auto Stopwatch::split() noexcept -> Time<U, D>
   {
     auto now = Clock::now();
 
@@ -503,7 +531,13 @@ namespace Chronometro
       _duration_tot = {};
     }
 
-    return Time<>{tot_duration};
+    return Time<U, D>{tot_duration};
+  }
+
+  template<unsigned D, Unit U>
+  auto Stopwatch::split() noexcept -> Time<U, D>
+  {
+    return split<U, D>();
   }
 
   void Stopwatch::reset() noexcept
