@@ -174,7 +174,7 @@ namespace Chronometro
 #else
 # define CHRONOMETRO_THREADLOCAL
 # define CHRONOMETRO_MAKE_MUTEX(...)
-# define CHRONOMETRO_LOCK(MUTEX)      void(0)
+# define CHRONOMETRO_LOCK(MUTEX)     void(0)
 #endif
 
     CHRONOMETRO_MAKE_MUTEX(_out_mtx);
@@ -308,6 +308,10 @@ namespace Chronometro
     }
   }
 //----------------------------------------------------------------------------------------------------------------------
+# undef  CHRONOMETRO_MEASURE
+# define CHRONOMETRO_MEASURE(...)                                                      \
+    for (Chronometro::Measure _measurement{__VA_ARGS__}; _measurement; ++_measurement)
+
   template<Unit U, unsigned D>
   class Time
   {
@@ -432,10 +436,6 @@ namespace Chronometro
     Measure* const _measurement;
   friend class Measure;
   };
-
-# undef  CHRONOMETRO_MEASURE
-# define CHRONOMETRO_MEASURE(...)                                                      \
-    for (Chronometro::Measure _measurement{__VA_ARGS__}; _measurement; ++_measurement)
 
 # undef  CHRONOMETRO_ONLY_EVERY_MS
 # define CHRONOMETRO_ONLY_EVERY_MS(N)                                                            \
