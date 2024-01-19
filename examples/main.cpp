@@ -90,8 +90,18 @@ int main()
   std::cout << '\n';
   for (auto iteration : Chronometro::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
   {
-    sleep_for_ms(7);
+    sleep_for_ms(7); // measured
 
-    iteration.guard(), sleep_for_ms(100); // not measured
+    iteration.guard(), sleep_for_ms(50); // not measured
+
+    sleep_for_ms(1); // measured
+
+    {
+      auto guard = iteration.guard();
+      sleep_for_ms(10); // not measured
+      sleep_for_ms(5);  // not measured
+    }
+
+    sleep_for_ms(1); // measured
   }
 }
