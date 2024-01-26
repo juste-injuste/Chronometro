@@ -10,4 +10,5 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/)
 set(EXOARM_SOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/examples/)
 
-add_executable(Chronometro ${EXOARM_SOURCES_DIR}/main.cpp ${EXOARM_SOURCES_DIR}/ODR.cpp)
+add_executable(Chronometro ${EXOARM_SOURCES_DIR}/main.cpp
+                           ${EXOARM_SOURCES_DIR}/ODR.cpp)
