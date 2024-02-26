@@ -41,20 +41,20 @@ execution time of code blocks and more. See the included README.MD file for more
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
 //---necessary libraries------------------------------------------------------------------------------------------------
-#include <chrono>       // for std::chrono::steady_clock, std::chrono::high_resolution_clock, std::chrono::nanoseconds
-#include <ostream>      // for std::ostream
-#include <iostream>     // for std::cout, std::clog, std::endl
-#include <string>       // for std::string
-#include <utility>      // for std::move
-# include <cstdio>      // for std::sprintf
-//---supplementary libraries--------------------------------------------------------------------------------------------
+#include <chrono>   // for std::chrono::steady_clock, std::chrono::high_resolution_clock, std::chrono::nanoseconds
+#include <ostream>  // for std::ostream
+#include <iostream> // for std::cout, std::clog, std::endl
+#include <string>   // for std::string
+#include <utility>  // for std::move
+#include <cstdio>   // for std::sprintf
+//---conditionally necessary libraries----------------------------------------------------------------------------------
 #if not defined(CHRONOMETRO_CLOCK)
 # include <type_traits> // for std::conditional
 #endif
 
 #if defined(__STDCPP_THREADS__) and not defined(CHRONOMETRO_NOT_THREADSAFE)
 # define CHRONOMETRO_THREADSAFE
-# include <mutex>       // for std::mutex, std::lock_guard
+# include <mutex> // for std::mutex, std::lock_guard
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
