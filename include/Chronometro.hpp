@@ -106,7 +106,6 @@ namespace Chronometro
   namespace Global
   {
     static std::ostream out{std::cout.rdbuf()}; // output ostream
-    static std::ostream wrn{std::clog.rdbuf()}; // warning ostream
   }
 
   namespace Version
