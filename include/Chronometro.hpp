@@ -100,7 +100,6 @@ namespace Chronometro
 
   // print time to ostream
   template<Unit U, unsigned D>
-  inline
   std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept;
 
   namespace Global
@@ -199,7 +198,6 @@ namespace Chronometro
 #   undef CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION
 
     template<Unit U, unsigned D>
-    inline
     const char* _time_as_cstring(Time<U, D> time)
     {
       static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
@@ -219,7 +217,6 @@ namespace Chronometro
     }
 
     template<unsigned D>
-    inline
     const char* _time_as_cstring(Time<Unit::automatic, D> time)
     {
       // 10 h < duration
@@ -257,7 +254,6 @@ namespace Chronometro
     }
 
     template<Unit U, unsigned D>
-    inline
     std::string _format_time(Time<U, D> time, std::string&& format) noexcept
     {
       static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
@@ -277,7 +273,6 @@ namespace Chronometro
     }
 
     template<Unit U, unsigned D>
-    inline
     std::string _format_lap(Time<U, D> time, std::string&& format, unsigned iteration) noexcept
     {
       auto position = format.find("%#");
@@ -291,7 +286,6 @@ namespace Chronometro
     }
 
     template<Unit U, unsigned D>
-    inline
     std::string _format_tot(Time<U, D> time, std::string&& format, unsigned iterations) noexcept
     {
       format = _format_time(time, std::move(format));
