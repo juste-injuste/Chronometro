@@ -307,8 +307,10 @@ namespace Chronometro
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHRONOMETRO_MEASURE
-# define CHRONOMETRO_MEASURE(...)                                                      \
-    for (Chronometro::Measure _measurement{__VA_ARGS__}; _measurement; ++_measurement)
+# define CHRONOMETRO_MEASURE(...)         CHRONOMETRO_ILOG_PROX(__LINE__, __VA_ARGS__)
+# define CHRONOMETRO_ILOG_PROX(line, ...) CHRONOMETRO_ILOG_IMPL(line,     __VA_ARGS__)
+# define CHRONOMETRO_ILOG_IMPL(line, ...)                                                                \
+    for (Chronometro::Measure _measurement##line{__VA_ARGS__}; _measurement##line; ++_measurement##line)
 
   template<Unit U, unsigned D>
   class Time
