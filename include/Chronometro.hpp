@@ -204,12 +204,17 @@ namespace Chronometro
     const char* _time_as_cstring(Time<U, D> time)
     {
       static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
-      static const char* format[] = {"%.0f %s", "%.1f %s", "%.2f %s", "%.3f %s"};
 
       static CHRONOMETRO_THREADLOCAL char buffer[32];
 
       double ajusted_time = static_cast<double>(time.nanoseconds.count())/_unit_helper<U>::factor;
-      std::sprintf(buffer, format[D], ajusted_time, _unit_helper<U>::label);
+
+      std::sprintf(buffer,
+        D == 0 ? "%.0f %s"
+      : D == 1 ? "%.1f %s"
+      : D == 2 ? "%.2f %s"
+      :          "%.3f %s",
+      ajusted_time, _unit_helper<U>::label);
 
       return buffer;
     }
