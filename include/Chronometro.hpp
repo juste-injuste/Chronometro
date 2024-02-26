@@ -59,17 +59,6 @@ execution time of code blocks and more. See the included README.MD file for more
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
 {
-  // clock used to measure time
-#if defined(CHRONOMETRO_CLOCK)
-  using Clock = CHRONOMETRO_CLOCK;
-#else
-  using Clock = std::conditional<
-    std::chrono::high_resolution_clock::is_steady,
-    std::chrono::high_resolution_clock,
-    std::chrono::steady_clock
-  >::type;
-#endif
-
   // units in which Time<> can be displayed
   enum class Unit
   {
@@ -101,6 +90,17 @@ namespace Chronometro
   // print time to ostream
   template<Unit U, unsigned D>
   std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept;
+
+  // clock used to measure time
+#if defined(CHRONOMETRO_CLOCK)
+  using Clock = CHRONOMETRO_CLOCK;
+#else
+  using Clock = std::conditional<
+    std::chrono::high_resolution_clock::is_steady,
+    std::chrono::high_resolution_clock,
+    std::chrono::steady_clock
+  >::type;
+#endif
 
   namespace Global
   {
