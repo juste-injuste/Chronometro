@@ -37,6 +37,8 @@ Version 0.1.0 - Initial release
 Chronometro is a simple and lightweight C++11 (and newer) library that allows you to measure the
 execution time of code blocks and more. See the included README.MD file for more information.
 
+chz::Stopwatch;
+
 -----inclusion guard--------------------------------------------------------------------------------------------------*/
 #ifndef CHRONOMETRO_HPP
 #define CHRONOMETRO_HPP
@@ -304,13 +306,17 @@ namespace Chronometro
 
       return _format_time(Time<U, 3>{time.nanoseconds/iterations}, std::move(format));
     }
+
+    struct _measure_backdoor;
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHRONOMETRO_MEASURE
 # define CHRONOMETRO_MEASURE(...)         CHRONOMETRO_ILOG_PROX(__LINE__, __VA_ARGS__)
 # define CHRONOMETRO_ILOG_PROX(line, ...) CHRONOMETRO_ILOG_IMPL(line,     __VA_ARGS__)
-# define CHRONOMETRO_ILOG_IMPL(line, ...)                                                                \
-    for (Chronometro::Measure _measurement##line{__VA_ARGS__}; _measurement##line; ++_measurement##line)
+# define CHRONOMETRO_ILOG_IMPL(line, ...)                                  \
+    for (Chronometro::Measure _measurement##line{__VA_ARGS__};             \
+      Chronometro::_backend::_measure_backdoor::valid(_measurement##line); \
+      Chronometro::_backend::_measure_backdoor::next(_measurement##line))
 
   template<Unit U, unsigned D>
   class Time
@@ -329,7 +335,7 @@ namespace Chronometro
 
   class Stopwatch
   {
-  private: class Guard;
+    class _guard;
   public:
     CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time
@@ -348,10 +354,15 @@ namespace Chronometro
     inline // unpause time measurement
     void unpause() noexcept;
 
-    inline // scoped pause/unpause (RAII)
-    auto guard() noexcept -> Guard;
-
-  public: // extra overloads to make formatting easier
+    inline // RAII-style scoped pause/unpause
+    auto guard() noexcept -> _guard;
+    
+  private:
+    bool                     _is_paused    = false;
+    std::chrono::nanoseconds _duration_tot = {};
+    std::chrono::nanoseconds _duration_lap = {};
+    Clock::time_point        _previous     = Clock::now();
+  public: // extra overloads to make time formatting easier
     template<Unit U, unsigned D = 0>
     CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time with custom format
@@ -371,11 +382,6 @@ namespace Chronometro
     CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
     auto split() noexcept -> Time<U, D>;
-  private:
-    bool                     _is_paused    = false;
-    std::chrono::nanoseconds _duration_tot = {};
-    std::chrono::nanoseconds _duration_lap = {};
-    Clock::time_point        _previous     = Clock::now();
   };
 
   class Measure
@@ -387,10 +393,10 @@ namespace Chronometro
     inline // measure iterations
     Measure(unsigned iterations) noexcept;
 
-    inline // measure iterations with iteration message
+    inline // measure iterations with custom iteration message
     Measure(unsigned iterations, const char* iteration_format) noexcept;
 
-    inline // measure iterations with iteration message and custom total message
+    inline // measure iterations with custom iteration/total message
     Measure(unsigned iterations, const char* iteration_format, const char* total_format) noexcept;
 
     inline // pause measurement
@@ -401,29 +407,33 @@ namespace Chronometro
 
     inline // scoped pause/unpause of measurement
     auto guard() noexcept -> decltype(Stopwatch().guard());
+
   private:
-    class View;
     const unsigned _iterations  = 1;
     unsigned       _iters_left  = _iterations;
     const char*    _iter_format = nullptr;
     const char*    _tot_format  = "total elapsed time: %ms";
     Stopwatch      _stopwatch;
-  public: // iterator stuff
-    inline auto begin()                    noexcept -> Measure&;
-    inline auto end()                const noexcept -> Measure;
-    inline View operator*()                noexcept;
-    inline void operator++()               noexcept;
-    inline bool operator!=(const Measure&) noexcept;
-    inline      operator bool()            noexcept;
+    class _iter;
+  public:
+    inline _iter begin()     noexcept;
+    inline _iter end() const noexcept;
+  private:
+    class View;
+    inline View  view()      noexcept;
+    inline void  next()      noexcept;
+    inline bool  good()      noexcept;
+  friend _backend::_measure_backdoor;
   };
 
   class Measure::View final
   {
+    friend Measure;
   public:
     // current measurement iteration
     const unsigned iteration;
 
-    inline // pause measurement
+    inline // pause measurements
     void pause() noexcept;
 
     inline // unpause measurement
@@ -434,48 +444,101 @@ namespace Chronometro
   private:
     inline View(unsigned current_iteration, Measure* measurement) noexcept;
     Measure* const _measurement;
-  friend class Measure;
   };
 
 # undef  CHRONOMETRO_ONLY_EVERY_MS
-# define CHRONOMETRO_ONLY_EVERY_MS(N)                                                            \
-    if ([]{                                                                                      \
-      static_assert((N) > 0, "CHRONOMETRO_ONLY_EVERY_MS: N must be a non-zero positive number"); \
-      static Chronometro::Clock::time_point _previous = {};                                      \
-      auto _target = std::chrono::nanoseconds{(N)*1000000};                                      \
-      if ((Chronometro::Clock::now() - _previous) > _target)                                     \
-      {                                                                                          \
-        _previous = Chronometro::Clock::now();                                                   \
-        return true;                                                                             \
-      }                                                                                          \
-      return false;                                                                              \
+# define CHRONOMETRO_ONLY_EVERY_MS(N)                                                               \
+    if ([]{                                                                                         \
+      static_assert((N) > 0, "CHRONOMETRO_ONLY_EVERY_MS: 'N' must be a non-zero positive number."); \
+      static Chronometro::Clock::time_point _previous = {};                                         \
+      auto _target = std::chrono::nanoseconds{(N)*1000000};                                         \
+      if ((Chronometro::Clock::now() - _previous) > _target)                                        \
+      {                                                                                             \
+        _previous = Chronometro::Clock::now();                                                      \
+        return true;                                                                                \
+      }                                                                                             \
+      return false;                                                                                 \
     }())
-//----------------------------------------------------------------------------------------------------------------------
-  class Stopwatch::Guard final
+
+  template<Unit U, unsigned D>
+  std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept
   {
+    return ostream << "elapsed time: " << _backend::_time_as_cstring(time) << std::endl;
+  }
+//----------------------------------------------------------------------------------------------------------------------
+  namespace _backend
+  {
+    struct _measure_backdoor
+    {
+      static
+      bool valid(Measure& measure_) noexcept
+      {
+        return measure_.good();
+      }
+
+      static
+      void next(Measure& measure_) noexcept
+      {
+        measure_.next();
+      }
+    };
+  }
+//----------------------------------------------------------------------------------------------------------------------
+  class Stopwatch::_guard final
+  {
+    friend Stopwatch;
   private:
     Stopwatch* const _stopwatch;
 
-    Guard(Stopwatch* stopwatch) noexcept :
+    _guard(Stopwatch* stopwatch) noexcept :
       _stopwatch(stopwatch)
     {
       _stopwatch->pause();
     }
+
   public:
-    ~Guard() noexcept
+    ~_guard() noexcept
     {
       _stopwatch->unpause();
     }
-  friend class Stopwatch;
   };
 //----------------------------------------------------------------------------------------------------------------------
-  template<Unit U, unsigned D> template<Unit U_, unsigned D_>
+  class Measure::_iter final
+  {
+  public:
+    _iter() noexcept = default;
+
+    _iter(Measure* const measure_) :
+      _measure(measure_)
+    {}
+
+    void operator++() const noexcept
+    {
+      _measure->next();
+    }
+
+    bool operator!=(_iter&) const noexcept
+    {
+      return _measure->good();
+    }
+
+    auto operator*() const noexcept -> Measure::View
+    {
+      return _measure->view();
+    }
+  private:
+    Measure* const _measure = nullptr;
+  };
+//----------------------------------------------------------------------------------------------------------------------
+  template<Unit U, unsigned D>
+  template<Unit U_, unsigned D_>
   auto Time<U, D>::format() noexcept -> Time<U_, D_>
   {
     return reinterpret_cast<Time<U_, D_>&>(*this);
   }
 
-  template<Unit U, unsigned D> template<unsigned D_, Unit U_>
+  template<Unit U, unsigned D>
+  template<unsigned D_, Unit U_>
   auto Time<U, D>::format() noexcept -> Time<U_, D_>
   {
     return reinterpret_cast<Time<U_, D_>&>(*this);
@@ -575,9 +638,9 @@ namespace Chronometro
     }
   }
 
-  auto Stopwatch::guard() noexcept -> Stopwatch::Guard
+  auto Stopwatch::guard() noexcept -> Stopwatch::_guard
   {
-    return Guard(this);
+    return _guard(this);
   }
 //----------------------------------------------------------------------------------------------------------------------
   Measure::Measure(unsigned iterations) noexcept :
@@ -607,27 +670,12 @@ namespace Chronometro
     _stopwatch.unpause();
   }
 
-  Measure& Measure::begin() noexcept
-  {
-    _iters_left = _iterations;
-
-    _stopwatch.unpause();
-    _stopwatch.reset();
-
-    return *this;
-  }
-
-  Measure Measure::end() const noexcept
-  {
-    return Measure(0);
-  }
-
-  Measure::View Measure::operator*() noexcept
+  Measure::View Measure::view() noexcept
   {
     return View(_iterations - _iters_left, this);
   }
 
-  void Measure::operator++() noexcept
+  void Measure::next() noexcept
   {
     _stopwatch.pause();
     auto iter_duration = _stopwatch.lap();
@@ -641,13 +689,8 @@ namespace Chronometro
     --_iters_left;
     _stopwatch.unpause();
   }
-
-  bool Measure::operator!=(const Measure&) noexcept
-  {
-    return operator bool();
-  }
-
-  Measure::operator bool() noexcept
+  
+  bool Measure::good() noexcept
   {
     _stopwatch.pause();
     if (_iters_left) CHRONOMETRO_HOT
@@ -687,15 +730,24 @@ namespace Chronometro
     return _stopwatch.guard();
   }
 
+  auto Measure::begin() noexcept -> _iter
+  {
+    _iters_left = _iterations;
+
+    _stopwatch.unpause();
+    _stopwatch.reset();
+
+    return _iter(this);
+  }
+
+  auto Measure::end() const noexcept -> _iter
+  {
+    return _iter();
+  }
+
   auto Measure::View::guard() noexcept -> decltype(Stopwatch().guard())
   {
     return _measurement->guard();
-  }
-//----------------------------------------------------------------------------------------------------------------------
-  template<Unit U, unsigned D>
-  std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept
-  {
-    return ostream << "elapsed time: " << _backend::_time_as_cstring(time) << std::endl;
   }
 }
 //----------------------------------------------------------------------------------------------------------------------
