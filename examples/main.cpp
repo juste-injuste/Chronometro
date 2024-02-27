@@ -47,7 +47,7 @@ int main()
   std::cout << "five times\n";
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(1, nullptr, "should take ~800 ms, took %ms")
+  CHRONOMETRO_MEASURE(1, "", "should take ~800 ms, took %ms")
   {
     unsigned inner_loops = 0, outer_loops = 0;
     while (inner_loops < 5)
