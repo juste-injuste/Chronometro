@@ -45,17 +45,17 @@ chz::Stopwatch;
 //---necessary libraries------------------------------------------------------------------------------------------------
 #include <chrono>   // for std::chrono::steady_clock, std::chrono::high_resolution_clock, std::chrono::nanoseconds
 #include <ostream>  // for std::ostream
-#include <iostream> // for std::cout, std::clog, std::endl
+#include <iostream> // for std::cout, std::endl
 #include <string>   // for std::string
 #include <utility>  // for std::move
 #include <cstdio>   // for std::sprintf
-//---conditionally necessary libraries----------------------------------------------------------------------------------
+//---conditionally necessary standard libraries-------------------------------------------------------------------------
 #if not defined(CHRONOMETRO_CLOCK)
 # include <type_traits> // for std::conditional
 #endif
 
 #if defined(__STDCPP_THREADS__) and not defined(CHRONOMETRO_NOT_THREADSAFE)
-# define CHRONOMETRO_THREADSAFE
+# define _cHZ_THREADSAFE
 # include <mutex> // for std::mutex, std::lock_guard
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
@@ -120,91 +120,91 @@ namespace Chronometro
   namespace _backend
   {
 # if defined(__clang__)
-#   define CHRONOMETRO_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
-#   define CHRONOMETRO_CLANG_IGNORE(WARNING, ...)          \
-      CHRONOMETRO_PRAGMA(clang diagnostic push)            \
-      CHRONOMETRO_PRAGMA(clang diagnostic ignored WARNING) \
-      __VA_ARGS__                                          \
-      CHRONOMETRO_PRAGMA(clang diagnostic pop)
+#   define _cHZ_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
+#   define _cHZ_IGNORE(WARNING, ...)                \
+      _cHZ_PRAGMA(clang diagnostic push)            \
+      _cHZ_PRAGMA(clang diagnostic ignored WARNING) \
+      __VA_ARGS__                                   \
+      _cHZ_PRAGMA(clang diagnostic pop)
 #endif
 
 // support from clang 12.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 12)
 # if __cplusplus < 202002L
-#   define CHRONOMETRO_HOT  CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[likely]])
-#   define CHRONOMETRO_COLD CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[unlikely]])
+#   define _cHZ_HOT  _cHZ_IGNORE("-Wc++20-extensions", [[likely]])
+#   define _cHZ_COLD _cHZ_IGNORE("-Wc++20-extensions", [[unlikely]])
 # else
-#   define CHRONOMETRO_HOT  [[likely]]
-#   define CHRONOMETRO_COLD [[unlikely]]
+#   define _cHZ_HOT  [[likely]]
+#   define _cHZ_COLD [[unlikely]]
 # endif
 # elif defined(__GNUC__) and (__GNUC__ >= 10)
-#   define CHRONOMETRO_HOT  [[likely]]
-#   define CHRONOMETRO_COLD [[unlikely]]
+#   define _cHZ_HOT  [[likely]]
+#   define _cHZ_COLD [[unlikely]]
 # else
-#   define CHRONOMETRO_HOT
-#   define CHRONOMETRO_COLD
+#   define _cHZ_HOT
+#   define _cHZ_COLD
 # endif
 
 // support from clang 3.9.0 and GCC 5.1 onward
 # if defined(__clang__)
-#   define CHRONOMETRO_NODISCARD __attribute__((warn_unused_result))
+#   define _cHZ_NODISCARD __attribute__((warn_unused_result))
 # elif defined(__GNUC__)
-#   define CHRONOMETRO_NODISCARD __attribute__((warn_unused_result))
+#   define _cHZ_NODISCARD __attribute__((warn_unused_result))
 # else
-#   define CHRONOMETRO_NODISCARD
+#   define _cHZ_NODISCARD
 # endif
 
 // support from clang 10.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 10)
 # if __cplusplus < 202002L
-#   define CHRONOMETRO_NODISCARD_REASON(REASON) CHRONOMETRO_CLANG_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
+#   define _cHZ_NODISCARD_REASON(REASON) _cHZ_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
 # else
-#   define CHRONOMETRO_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
+#   define _cHZ_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
 # endif
 # elif defined(__GNUC__) and (__GNUC__ >= 10)
-#   define CHRONOMETRO_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
+#   define _cHZ_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
 # else
-#   define CHRONOMETRO_NODISCARD_REASON(REASON) CHRONOMETRO_NODISCARD
+#   define _cHZ_NODISCARD_REASON(REASON) _cHZ_NODISCARD
 # endif
 
-#if defined(CHRONOMETRO_THREADSAFE)
-# define CHRONOMETRO_THREADLOCAL     thread_local
-# define CHRONOMETRO_MAKE_MUTEX(...) static std::mutex __VA_ARGS__
-# define CHRONOMETRO_LOCK(MUTEX)     std::lock_guard<decltype(MUTEX)> _lock(MUTEX)
+#if defined(_cHZ_THREADSAFE)
+# undef  _cHZ_THREADSAFE
+# define _cHZ_THREADLOCAL         thread_local
+# define _cHZ_DECLARE_MUTEX(...)  static std::mutex __VA_ARGS__
+# define _cHZ_DECLARE_LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> _lock(MUTEX)
 #else
-# define CHRONOMETRO_THREADLOCAL
-# define CHRONOMETRO_MAKE_MUTEX(...)
-# define CHRONOMETRO_LOCK(MUTEX)     void(0)
+# define _cHZ_THREADLOCAL
+# define _cHZ_DECLARE_MUTEX(...)
+# define _cHZ_DECLARE_LOCK(MUTEX) void(0)
 #endif
 
-    CHRONOMETRO_MAKE_MUTEX(_out_mtx);
+    _cHZ_DECLARE_MUTEX(_out_mtx);
 
     template<Unit>
     struct _unit_helper;
 
-#   define CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(UNIT, LABEL, FACTOR) \
-      template<>                                                            \
-      struct _unit_helper<UNIT>                                             \
-      {                                                                     \
-        static constexpr const char* label  = LABEL;                        \
-        static constexpr double      factor = FACTOR;                       \
+#   define _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION(UNIT, LABEL, FACTOR) \
+      template<>                                                     \
+      struct _unit_helper<UNIT>                                      \
+      {                                                              \
+        static constexpr const char* label  = LABEL;                 \
+        static constexpr double      factor = FACTOR;                \
       }
     
-    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ns,  "ns",  1);
-    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::us,  "us",  1000);
-    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ms,  "ms",  1000000);
-    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::s,   "s",   1000000000);
-    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::min, "min", 60000000000);
-    CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::h,   "h",   3600000000000);
-
-#   undef CHRONOMETRO_MAKE_UNIT_HELPER_SPECIALIZATION
+    _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ns,  "ns",  1);
+    _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::us,  "us",  1000);
+    _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ms,  "ms",  1000000);
+    _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::s,   "s",   1000000000);
+    _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::min, "min", 60000000000);
+    _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::h,   "h",   3600000000000);
+#   undef _cHZ_MAKE_UNIT_HELPER_SPECIALIZATION
 
     template<Unit U, unsigned D>
     const char* _time_as_cstring(Time<U, D> time)
     {
       static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
 
-      static CHRONOMETRO_THREADLOCAL char buffer[32];
+      static _cHZ_THREADLOCAL char buffer[32];
 
       double ajusted_time = static_cast<double>(time.nanoseconds.count())/_unit_helper<U>::factor;
 
@@ -222,13 +222,13 @@ namespace Chronometro
     const char* _time_as_cstring(Time<Unit::automatic, D> time)
     {
       // 10 h < duration
-      if (time.nanoseconds.count() > 36000000000000) CHRONOMETRO_COLD
+      if (time.nanoseconds.count() > 36000000000000) _cHZ_COLD
       {
         return _time_as_cstring(Time<Unit::h, D>{time.nanoseconds});
       }
 
       // 10 min < duration <= 10 h
-      if (time.nanoseconds.count() > 600000000000) CHRONOMETRO_COLD
+      if (time.nanoseconds.count() > 600000000000) _cHZ_COLD
       {
         return _time_as_cstring(Time<Unit::min, D>{time.nanoseconds});
       }
@@ -299,7 +299,7 @@ namespace Chronometro
         position = format.find("%D");
       }
 
-      if (iterations == 0) CHRONOMETRO_COLD
+      if (iterations == 0) _cHZ_COLD
       {
         iterations = 1;
       }
@@ -311,9 +311,9 @@ namespace Chronometro
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHRONOMETRO_MEASURE
-# define CHRONOMETRO_MEASURE(...)         CHRONOMETRO_ILOG_PROX(__LINE__, __VA_ARGS__)
-# define CHRONOMETRO_ILOG_PROX(line, ...) CHRONOMETRO_ILOG_IMPL(line,     __VA_ARGS__)
-# define CHRONOMETRO_ILOG_IMPL(line, ...)                                  \
+# define CHRONOMETRO_MEASURE(...)     _cHZ_MEASURE_PROX(__LINE__, __VA_ARGS__)
+# define _cHZ_MEASURE_PROX(line, ...) _cHZ_MEASURE_IMPL(line,     __VA_ARGS__)
+# define _cHZ_MEASURE_IMPL(line, ...)                                      \
     for (Chronometro::Measure _measurement##line{__VA_ARGS__};             \
       Chronometro::_backend::_measure_backdoor::valid(_measurement##line); \
       Chronometro::_backend::_measure_backdoor::next(_measurement##line))
@@ -337,11 +337,11 @@ namespace Chronometro
   {
     class _guard;
   public:
-    CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
+    _cHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time
     auto lap() noexcept -> Time<Unit::automatic, 0>;
 
-    CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
+    _cHZ_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
     auto split() noexcept -> Time<Unit::automatic, 0>;
 
@@ -364,22 +364,22 @@ namespace Chronometro
     Clock::time_point        _previous     = Clock::now();
   public: // extra overloads to make time formatting easier
     template<Unit U, unsigned D = 0>
-    CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
+    _cHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time with custom format
     auto lap() noexcept -> Time<U, D>;
 
     template<unsigned D, Unit U = Unit::automatic>
-    CHRONOMETRO_NODISCARD_REASON("lap: not using the return value makes no sens")
+    _cHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time with custom format
     auto lap() noexcept -> Time<U, D>;
 
     template<Unit U, unsigned D = 0>
-    CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
+    _cHZ_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time with custom format
     auto split() noexcept -> Time<U, D>;
 
     template<unsigned D, Unit U = Unit::automatic>
-    CHRONOMETRO_NODISCARD_REASON("split: not using the return value makes no sens")
+    _cHZ_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
     auto split() noexcept -> Time<U, D>;
   };
@@ -557,7 +557,7 @@ namespace Chronometro
     std::chrono::nanoseconds lap_duration = _duration_lap;
     _duration_lap = {};
 
-    if (not _is_paused) CHRONOMETRO_HOT
+    if (not _is_paused) _cHZ_HOT
     {
       _duration_tot += now - _previous;
       lap_duration  += now - _previous;
@@ -586,7 +586,7 @@ namespace Chronometro
 
     std::chrono::nanoseconds tot_duration = _duration_tot;
 
-    if (not _is_paused) CHRONOMETRO_HOT
+    if (not _is_paused) _cHZ_HOT
     {
       tot_duration += now - _previous;
 
@@ -619,7 +619,7 @@ namespace Chronometro
   {
     auto now = Clock::now();
 
-    if (not _is_paused) CHRONOMETRO_HOT
+    if (not _is_paused) _cHZ_HOT
     {
       _is_paused = true;
 
@@ -630,7 +630,7 @@ namespace Chronometro
 
   void Stopwatch::unpause() noexcept
   {
-    if (_is_paused) CHRONOMETRO_HOT
+    if (_is_paused) _cHZ_HOT
     {
       _is_paused = false;
 
@@ -682,7 +682,7 @@ namespace Chronometro
 
     if (_iter_format)
     {
-      CHRONOMETRO_LOCK(_backend::_out_mtx);
+      _cHZ_DECLARE_LOCK(_backend::_out_mtx);
       Global::out << _backend::_format_lap(iter_duration, _iter_format, _iterations - _iters_left) << std::endl;
     }
 
@@ -693,7 +693,7 @@ namespace Chronometro
   bool Measure::good() noexcept
   {
     _stopwatch.pause();
-    if (_iters_left) CHRONOMETRO_HOT
+    if (_iters_left) _cHZ_HOT
     {
       _stopwatch.unpause();
       return true;
@@ -701,9 +701,9 @@ namespace Chronometro
 
     auto duration = _stopwatch.split();
 
-    if (_tot_format) CHRONOMETRO_HOT
+    if (_tot_format) _cHZ_HOT
     {
-      CHRONOMETRO_LOCK(_backend::_out_mtx);
+      _cHZ_DECLARE_LOCK(_backend::_out_mtx);
       Global::out << _backend::_format_tot(duration, _tot_format, _iterations) << std::endl;
     }
 
@@ -751,14 +751,13 @@ namespace Chronometro
   }
 }
 //----------------------------------------------------------------------------------------------------------------------
-# undef CHRONOMETRO_PRAGMA
-# undef CHRONOMETRO_CLANG_IGNORE
-# undef CHRONOMETRO_HOT
-# undef CHRONOMETRO_COLD
-# undef CHRONOMETRO_NODISCARD
-# undef CHRONOMETRO_NODISCARD_REASON
-# undef CHRONOMETRO_THREADSAFE
-# undef CHRONOMETRO_THREADLOCAL
-# undef CHRONOMETRO_MAKE_MUTEX
-# undef CHRONOMETRO_LOCK
+# undef _cHZ_PRAGMA
+# undef _cHZ_IGNORE
+# undef _cHZ_HOT
+# undef _cHZ_COLD
+# undef _cHZ_NODISCARD
+# undef _cHZ_NODISCARD_REASON
+# undef _cHZ_THREADLOCAL
+# undef _cHZ_DECLARE_MUTEX
+# undef _cHZ_DECLARE_LOCK
 #endif
