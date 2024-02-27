@@ -269,10 +269,9 @@ namespace Chronometro
     {
       static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
 
-      for (unsigned k = 0; k < 6; ++k)
+      for (const auto& unit_specifier : unit_specifiers)
       {
-        const auto& unit_specifier = unit_specifiers[k];
-        auto  position             = format.rfind(unit_specifier);
+        auto position = format.rfind(unit_specifier);
         while (position != std::string::npos)
         {
           format.replace(position, unit_specifier.length(), _time_as_cstring(time));
