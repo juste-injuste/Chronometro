@@ -53,13 +53,13 @@ execution time of code blocks and more. See the included README.MD file for more
 #endif
 
 #if defined(__STDCPP_THREADS__) and not defined(CHRONOMETRO_NOT_THREADSAFE)
-# define _backend_CHZ_THREADSAFE
+# define _chz_impl_THREADSAFE
 # include <mutex> // for std::mutex, std::lock_guard
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
 {
-  // measures the time it takes to execute the following statement/block n times, with labels
+  // measures the time it takes to execute the following statement/block N times, with labels
 # define CHRONOMETRO_MEASURE(...)
 
   // measure elapsed time
@@ -68,7 +68,7 @@ namespace Chronometro
   // measure iterations via range-based for-loop
   class Measure;
 
-  // units in which _time<> can be displayed
+  // units in which time obtained from Stopwatch can be displayed
   enum class Unit
   {
     ns,       // nanoseconds
@@ -85,7 +85,7 @@ namespace Chronometro
 
   namespace _io
   {
-    static std::ostream out{std::cout.rdbuf()}; // output ostream
+    static std::ostream out(std::cout.rdbuf()); // output ostream
   }
 
   namespace _version
@@ -99,62 +99,62 @@ namespace Chronometro
   namespace _backend
   {
 # if defined(__clang__)
-#   define _backend_CHZ_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
-#   define _backend_CHZ_IGNORE(WARNING, ...)                \
-      _backend_CHZ_PRAGMA(clang diagnostic push)            \
-      _backend_CHZ_PRAGMA(clang diagnostic ignored WARNING) \
+#   define _chz_impl_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
+#   define _chz_impl_IGNORE(WARNING, ...)                \
+      _chz_impl_PRAGMA(clang diagnostic push)            \
+      _chz_impl_PRAGMA(clang diagnostic ignored WARNING) \
       __VA_ARGS__                                   \
-      _backend_CHZ_PRAGMA(clang diagnostic pop)
+      _chz_impl_PRAGMA(clang diagnostic pop)
 #endif
 
 // support from clang 12.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 12)
 # if __cplusplus < 202002L
-#   define _backend_CHZ_HOT  _backend_CHZ_IGNORE("-Wc++20-extensions", [[likely]])
-#   define _backend_CHZ_COLD _backend_CHZ_IGNORE("-Wc++20-extensions", [[unlikely]])
+#   define _chz_impl_HOT  _chz_impl_IGNORE("-Wc++20-extensions", [[likely]])
+#   define _chz_impl_COLD _chz_impl_IGNORE("-Wc++20-extensions", [[unlikely]])
 # else
-#   define _backend_CHZ_HOT  [[likely]]
-#   define _backend_CHZ_COLD [[unlikely]]
+#   define _chz_impl_HOT  [[likely]]
+#   define _chz_impl_COLD [[unlikely]]
 # endif
 # elif defined(__GNUC__) and (__GNUC__ >= 10)
-#   define _backend_CHZ_HOT  [[likely]]
-#   define _backend_CHZ_COLD [[unlikely]]
+#   define _chz_impl_HOT  [[likely]]
+#   define _chz_impl_COLD [[unlikely]]
 # else
-#   define _backend_CHZ_HOT
-#   define _backend_CHZ_COLD
+#   define _chz_impl_HOT
+#   define _chz_impl_COLD
 # endif
 
 // support from clang 3.9.0 and GCC 5.1 onward
 # if defined(__clang__)
-#   define _backend_CHZ_NODISCARD __attribute__((warn_unused_result))
+#   define _chz_impl_NODISCARD __attribute__((warn_unused_result))
 # elif defined(__GNUC__)
-#   define _backend_CHZ_NODISCARD __attribute__((warn_unused_result))
+#   define _chz_impl_NODISCARD __attribute__((warn_unused_result))
 # else
-#   define _backend_CHZ_NODISCARD
+#   define _chz_impl_NODISCARD
 # endif
 
 // support from clang 10.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 10)
 # if __cplusplus < 202002L
-#   define _backend_CHZ_NODISCARD_REASON(REASON) _backend_CHZ_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
+#   define _chz_impl_NODISCARD_REASON(REASON) _chz_impl_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
 # else
-#   define _backend_CHZ_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
+#   define _chz_impl_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
 # endif
 # elif defined(__GNUC__) and (__GNUC__ >= 10)
-#   define _backend_CHZ_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
+#   define _chz_impl_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
 # else
-#   define _backend_CHZ_NODISCARD_REASON(REASON) _backend_CHZ_NODISCARD
+#   define _chz_impl_NODISCARD_REASON(REASON) _chz_impl_NODISCARD
 # endif
 
-#if defined(_backend_CHZ_THREADSAFE)
-# undef  _backend_CHZ_THREADSAFE
-# define _backend_CHZ_THREADLOCAL         thread_local
-# define _backend_CHZ_DECLARE_MUTEX(...)  static std::mutex __VA_ARGS__
-# define _backend_CHZ_DECLARE_LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> _lock(MUTEX)
+#if defined(_chz_impl_THREADSAFE)
+# undef  _chz_impl_THREADSAFE
+# define _chz_impl_THREADLOCAL         thread_local
+# define _chz_impl_DECLARE_MUTEX(...)  static std::mutex __VA_ARGS__
+# define _chz_impl_DECLARE_LOCK(MUTEX) std::lock_guard<decltype(MUTEX)> _lock(MUTEX)
 #else
-# define _backend_CHZ_THREADLOCAL
-# define _backend_CHZ_DECLARE_MUTEX(...)
-# define _backend_CHZ_DECLARE_LOCK(MUTEX) void(0)
+# define _chz_impl_THREADLOCAL
+# define _chz_impl_DECLARE_MUTEX(...)
+# define _chz_impl_DECLARE_LOCK(MUTEX) void(0)
 #endif
 
   // clock used to measure time
@@ -168,31 +168,31 @@ namespace Chronometro
   >::type;
 #endif
 
-    template<Unit U, unsigned D>
+    template<Unit unit, unsigned n_decimals>
     class _time
     {
     public:
       std::chrono::nanoseconds nanoseconds;
 
-      template<Unit U_, unsigned D_ = D>
-      auto format() noexcept -> _time<U_, D_>
+      template<Unit unit_, unsigned n_decimals_ = n_decimals>
+      auto format() noexcept -> _time<unit_, n_decimals_>
       {
-        return reinterpret_cast<_time<U_, D_>&>(*this);
+        return reinterpret_cast<_time<unit_, n_decimals_>&>(*this);
       }
 
-      template<unsigned D_, Unit U_ = U>
-      auto format() noexcept -> _time<U_, D_>
+      template<unsigned n_decimals_, Unit unit_ = unit>
+      auto format() noexcept -> _time<unit_, n_decimals_>
       {
-        return reinterpret_cast<_time<U_, D_>&>(*this);
+        return reinterpret_cast<_time<unit_, n_decimals_>&>(*this);
       }
     };
 
-    _backend_CHZ_DECLARE_MUTEX(_out_mtx);
+    _chz_impl_DECLARE_MUTEX(_out_mtx);
 
     template<Unit>
     struct _unit_helper;
 
-#   define _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION(UNIT, LABEL, FACTOR) \
+#   define _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(UNIT, LABEL, FACTOR) \
       template<>                                                     \
       struct _unit_helper<UNIT>                                      \
       {                                                              \
@@ -200,147 +200,148 @@ namespace Chronometro
         static constexpr double      factor = FACTOR;                \
       }
     
-    _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ns,  "ns",  1);
-    _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::us,  "us",  1000);
-    _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ms,  "ms",  1000000);
-    _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::s,   "s",   1000000000);
-    _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::min, "min", 60000000000);
-    _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::h,   "h",   3600000000000);
-#   undef _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION
+    _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ns,  "ns",  1);
+    _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::us,  "us",  1000);
+    _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ms,  "ms",  1000000);
+    _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::s,   "s",   1000000000);
+    _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::min, "min", 60000000000);
+    _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::h,   "h",   3600000000000);
 
-    template<Unit U, unsigned D>
-    const char* _time_as_cstring(_time<U, D> time)
+#   undef _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION
+
+    template<Unit unit, unsigned n_decimals>
+    const char* _time_as_cstring(const _time<unit, n_decimals> time_) noexcept
     {
-      static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
+      static_assert(n_decimals <= 3, "_backend::_time_as_string: too many decimals requested");
 
-      static _backend_CHZ_THREADLOCAL char buffer[32];
+      static _chz_impl_THREADLOCAL char buffer[32];
 
-      double ajusted_time = static_cast<double>(time.nanoseconds.count())/_unit_helper<U>::factor;
+      const auto ajusted_time = static_cast<double>(time_.nanoseconds.count())/_unit_helper<unit>::factor;
 
       std::sprintf(buffer,
-        D == 0 ? "%.0f %s"
-      : D == 1 ? "%.1f %s"
-      : D == 2 ? "%.2f %s"
-      :          "%.3f %s",
-      ajusted_time, _unit_helper<U>::label);
+        n_decimals == 0 ? "%.0f %s"
+      : n_decimals == 1 ? "%.1f %s"
+      : n_decimals == 2 ? "%.2f %s"
+      :                   "%.3f %s",
+      ajusted_time, _unit_helper<unit>::label);
 
       return buffer;
     }
 
-    template<unsigned D>
-    const char* _time_as_cstring(_time<Unit::automatic, D> time)
+    template<unsigned n_decimals>
+    const char* _time_as_cstring(const _time<Unit::automatic, n_decimals> time_) noexcept
     {
       // 10 h < duration
-      if (time.nanoseconds.count() > 36000000000000) _backend_CHZ_COLD
+      if (time_.nanoseconds.count() > 36000000000000) _chz_impl_COLD
       {
-        return _time_as_cstring(_time<Unit::h, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::h, n_decimals>{time_.nanoseconds});
       }
 
       // 10 min < duration <= 10 h
-      if (time.nanoseconds.count() > 600000000000) _backend_CHZ_COLD
+      if (time_.nanoseconds.count() > 600000000000) _chz_impl_COLD
       {
-        return _time_as_cstring(_time<Unit::min, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::min, n_decimals>{time_.nanoseconds});
       }
 
       // 10 s < duration <= 10 m
-      if (time.nanoseconds.count() > 10000000000)
+      if (time_.nanoseconds.count() > 10000000000)
       {
-        return _time_as_cstring(_time<Unit::s, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::s, n_decimals>{time_.nanoseconds});
       }
 
       // 10 ms < duration <= 10 s
-      if (time.nanoseconds.count() > 10000000)
+      if (time_.nanoseconds.count() > 10000000)
       {
-        return _time_as_cstring(_time<Unit::ms, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::ms, n_decimals>{time_.nanoseconds});
       }
 
       // 10 us < duration <= 10 ms
-      if (time.nanoseconds.count() > 10000)
+      if (time_.nanoseconds.count() > 10000)
       {
-        return _time_as_cstring(_time<Unit::us, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::us, n_decimals>{time_.nanoseconds});
       }
 
       // duration <= 10 us
-      return _time_as_cstring(_time<Unit::ns, D>{time.nanoseconds});
+      return _time_as_cstring(_time<Unit::ns, n_decimals>{time_.nanoseconds});
     }
 
-    template<Unit U, unsigned D>
-    std::string _format_time(_time<U, D> time, std::string&& format) noexcept
+    template<Unit unit, unsigned n_decimals>
+    std::string _format_time(const _time<unit, n_decimals> time_, std::string&& fmt_) noexcept
     {
       static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
 
       for (const auto& unit_specifier : unit_specifiers)
       {
-        auto position = format.rfind(unit_specifier);
+        auto position = fmt_.rfind(unit_specifier);
         while (position != std::string::npos)
         {
-          format.replace(position, unit_specifier.length(), _time_as_cstring(time));
-          position = format.find(unit_specifier);
+          fmt_.replace(position, unit_specifier.length(), _time_as_cstring(time_));
+          position = fmt_.find(unit_specifier);
         }
       }
 
-      return std::move(format);
+      return std::move(fmt_);
     }
 
-    template<Unit U, unsigned D>
-    std::string _format_lap(_time<U, D> time, std::string&& format, unsigned iteration) noexcept
+    template<Unit unit, unsigned n_decimals>
+    std::string _format_lap(const _time<unit, n_decimals> time_, std::string&& fmt_, const unsigned iter_) noexcept
     {
-      auto position = format.find("%#");
+      auto position = fmt_.find("%#");
       while (position != std::string::npos)
       {
-        format.replace(position, 2, std::to_string(iteration));
-        position = format.rfind("%#");
+        fmt_.replace(position, 2, std::to_string(iter_));
+        position = fmt_.rfind("%#");
       }
 
-      return _format_time(time, std::move(format));
+      return _format_time(time_, std::move(fmt_));
     }
 
-    template<Unit U, unsigned D>
-    std::string _format_tot(_time<U, D> time, std::string&& format, unsigned iterations) noexcept
+    template<Unit unit, unsigned n_decimals>
+    std::string _format_tot(const _time<unit, n_decimals> time_, std::string&& fmt_, unsigned n_iters_) noexcept
     {
-      format = _format_time(time, std::move(format));
+      fmt_ = _format_time(time_, std::move(fmt_));
 
-      auto position = format.rfind("%D");
+      auto position = fmt_.rfind("%D");
       while (position != std::string::npos)
       {
-        format.erase(position + 1, 1);
-        position = format.find("%D");
+        fmt_.erase(position + 1, 1);
+        position = fmt_.find("%D");
       }
 
-      if (iterations == 0) _backend_CHZ_COLD
+      if (n_iters_ == 0) _chz_impl_COLD
       {
-        iterations = 1;
+        n_iters_ = 1;
       }
 
-      return _format_time(_time<U, 3>{time.nanoseconds/iterations}, std::move(format));
+      return _format_time(_time<unit, 3>{time_.nanoseconds/n_iters_}, std::move(fmt_));
     }
     
-    template<Unit U, unsigned D>
-    std::ostream& operator<<(std::ostream& ostream, _time<U, D> time) noexcept
+    template<Unit unit, unsigned n_decimals>
+    std::ostream& operator<<(std::ostream& ostream_, const _time<unit, n_decimals> time_) noexcept
     {
-      return ostream << "elapsed time: " << _backend::_time_as_cstring(time) << std::endl;
+      return ostream_ << "elapsed time: " << _backend::_time_as_cstring(time_) << std::endl;
     }
 
     struct _measure_backdoor;
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHRONOMETRO_MEASURE
-# define CHRONOMETRO_MEASURE(...)             _backend_CHZ_MEASURE_PROX(__LINE__, __VA_ARGS__)
-# define _backend_CHZ_MEASURE_PROX(line, ...) _backend_CHZ_MEASURE_IMPL(line,     __VA_ARGS__)
-# define _backend_CHZ_MEASURE_IMPL(line, ...)                             \
-    for (Chronometro::Measure _measurement##line{__VA_ARGS__};            \
-      Chronometro::_backend::_measure_backdoor::good(_measurement##line); \
-      Chronometro::_backend::_measure_backdoor::next(_measurement##line))
+# define CHRONOMETRO_MEASURE(...)                 _chz_impl_MEASURE_PROX(__LINE__,    __VA_ARGS__)
+# define _chz_impl_MEASURE_PROX(line_number, ...) _chz_impl_MEASURE_IMPL(line_number, __VA_ARGS__)
+# define _chz_impl_MEASURE_IMPL(line_number, ...)                                \
+    for (Chronometro::Measure _measurement##line_number{__VA_ARGS__};            \
+      Chronometro::_backend::_measure_backdoor::good(_measurement##line_number); \
+      Chronometro::_backend::_measure_backdoor::next(_measurement##line_number))
 
   class Stopwatch
   {
     class _guard;
-  public:
-    _backend_CHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
+  public:    
+    _chz_impl_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time
     auto lap() noexcept -> _backend::_time<Unit::automatic, 0>;
 
-    _backend_CHZ_NODISCARD_REASON("split: not using the return value makes no sens")
+    _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
     auto split() noexcept -> _backend::_time<Unit::automatic, 0>;
 
@@ -362,31 +363,32 @@ namespace Chronometro
     std::chrono::nanoseconds     _duration_lap = {};
     _backend::_clock::time_point _previous     = _backend::_clock::now();
   public: // extra overloads to make time formatting easier
-    template<Unit U, unsigned D = 0>
-    _backend_CHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
+    template<Unit unit, unsigned n_decimals = 0>
+    _chz_impl_NODISCARD_REASON("lap: not using the return value makes no sens.")
     inline // display and return lap time with custom format
-    auto lap() noexcept -> _backend::_time<U, D>;
+    auto lap() noexcept -> _backend::_time<unit, n_decimals>;
 
-    template<unsigned D, Unit U = Unit::automatic>
-    _backend_CHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
+    template<unsigned n_decimals, Unit unit = Unit::automatic>
+    _chz_impl_NODISCARD_REASON("lap: not using the return value makes no sens.")
     inline // display and return lap time with custom format
-    auto lap() noexcept -> _backend::_time<U, D>;
+    auto lap() noexcept -> _backend::_time<unit, n_decimals>;
 
-    template<Unit U, unsigned D = 0>
-    _backend_CHZ_NODISCARD_REASON("split: not using the return value makes no sens")
+    template<Unit unit, unsigned n_decimals = 0>
+    _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens.")
     inline // display and return split time with custom format
-    auto split() noexcept -> _backend::_time<U, D>;
+    auto split() noexcept -> _backend::_time<unit, n_decimals>;
 
-    template<unsigned D, Unit U = Unit::automatic>
-    _backend_CHZ_NODISCARD_REASON("split: not using the return value makes no sens")
+    template<unsigned n_decimals, Unit unit = Unit::automatic>
+    _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens.")
     inline // display and return split time
-    auto split() noexcept -> _backend::_time<U, D>;
+    auto split() noexcept -> _backend::_time<unit, n_decimals>;
   };
 
   class Measure
   {
+    class View;
   public:
-    // measure one iteration
+    constexpr // measure one iteration
     Measure() noexcept = default;
 
     inline // measure iterations
@@ -418,10 +420,9 @@ namespace Chronometro
     inline _iter begin()     noexcept;
     inline _iter end() const noexcept;
   private:
-    class View;
-    inline View  view()      noexcept;
-    inline void  next()      noexcept;
-    inline bool  good()      noexcept;
+    inline View view() noexcept;
+    inline void next() noexcept;
+    inline bool good() noexcept;
   friend _backend::_measure_backdoor;
   };
 
@@ -450,7 +451,7 @@ namespace Chronometro
     if ([]{                                                                                         \
       static_assert((N) > 0, "CHRONOMETRO_ONLY_EVERY_MS: 'N' must be a non-zero positive number."); \
       static Chronometro::_backend::_clock::time_point _previous = {};                              \
-      auto _target = std::chrono::nanoseconds{(N)*1000000};                                         \
+      const auto _target = std::chrono::nanoseconds{(N)*1000000};                                   \
       if ((Chronometro::_backend::_clock::now() - _previous) > _target)                             \
       {                                                                                             \
         _previous = Chronometro::_backend::_clock::now();                                           \
@@ -483,8 +484,10 @@ namespace Chronometro
   private:
     Stopwatch* const _stopwatch;
 
-    _guard(Stopwatch* stopwatch) noexcept :
-      _stopwatch(stopwatch)
+    _guard(
+      Stopwatch* const stopwatch_
+    ) noexcept :
+      _stopwatch(stopwatch_)
     {
       _stopwatch->pause();
     }
@@ -499,9 +502,9 @@ namespace Chronometro
   class Measure::_iter final
   {
   public:
-    _iter() noexcept = default;
+    constexpr _iter() noexcept = default;
 
-    _iter(Measure* const measure_) :
+    _iter(Measure* const measure_) noexcept :
       _measure(measure_)
     {}
 
@@ -510,7 +513,7 @@ namespace Chronometro
       _measure->next();
     }
 
-    bool operator!=(_iter&) const noexcept
+    bool operator!=(const _iter&) const noexcept
     {
       return _measure->good();
     }
@@ -528,15 +531,15 @@ namespace Chronometro
     return lap<Unit::automatic, 0>();
   }
   
-  template<Unit U, unsigned D>
-  auto Stopwatch::lap() noexcept -> _backend::_time<U, D>
+  template<Unit unit, unsigned n_decimals>
+  auto Stopwatch::lap() noexcept -> _backend::_time<unit, n_decimals>
   {
-    auto now = _backend::_clock::now();
+    const auto now = _backend::_clock::now();
 
     std::chrono::nanoseconds lap_duration = _duration_lap;
     _duration_lap = {};
 
-    if (not _is_paused) _backend_CHZ_HOT
+    if (not _is_paused) _chz_impl_HOT
     {
       _duration_tot += now - _previous;
       lap_duration  += now - _previous;
@@ -544,13 +547,13 @@ namespace Chronometro
       _previous = _backend::_clock::now(); // start measurement from here
     }
 
-    return _backend::_time<U, D>{lap_duration};
+    return _backend::_time<unit, n_decimals>{lap_duration};
   }
 
-  template<unsigned D, Unit U>
-  auto Stopwatch::lap() noexcept -> _backend::_time<U, D>
+  template<unsigned n_decimals, Unit unit>
+  auto Stopwatch::lap() noexcept -> _backend::_time<unit, n_decimals>
   {
-    return lap<U, D>();
+    return lap<unit, n_decimals>();
   }
 
   auto Stopwatch::split() noexcept -> _backend::_time<Unit::automatic, 0>
@@ -558,14 +561,14 @@ namespace Chronometro
     return split<Unit::automatic, 0>();
   }
 
-  template<Unit U, unsigned D>
-  auto Stopwatch::split() noexcept -> _backend::_time<U, D>
+  template<Unit unit, unsigned n_decimals>
+  auto Stopwatch::split() noexcept -> _backend::_time<unit, n_decimals>
   {
-    auto now = _backend::_clock::now();
+    const auto now = _backend::_clock::now();
 
     std::chrono::nanoseconds tot_duration = _duration_tot;
 
-    if (not _is_paused) _backend_CHZ_HOT
+    if (not _is_paused) _chz_impl_HOT
     {
       tot_duration += now - _previous;
 
@@ -573,13 +576,13 @@ namespace Chronometro
       _duration_tot = {};
     }
 
-    return _backend::_time<U, D>{tot_duration};
+    return _backend::_time<unit, n_decimals>{tot_duration};
   }
 
-  template<unsigned D, Unit U>
-  auto Stopwatch::split() noexcept -> _backend::_time<U, D>
+  template<unsigned n_decimals, Unit unit>
+  auto Stopwatch::split() noexcept -> _backend::_time<unit, n_decimals>
   {
-    return split<U, D>();
+    return split<unit, n_decimals>();
   }
 
   void Stopwatch::reset() noexcept
@@ -596,9 +599,9 @@ namespace Chronometro
 
   void Stopwatch::pause() noexcept
   {
-    auto now = _backend::_clock::now();
+    const auto now = _backend::_clock::now();
 
-    if (not _is_paused) _backend_CHZ_HOT
+    if (not _is_paused) _chz_impl_HOT
     {
       _is_paused = true;
 
@@ -609,7 +612,7 @@ namespace Chronometro
 
   void Stopwatch::unpause() noexcept
   {
-    if (_is_paused) _backend_CHZ_HOT
+    if (_is_paused) _chz_impl_HOT
     {
       _is_paused = false;
 
@@ -622,21 +625,30 @@ namespace Chronometro
     return _guard(this);
   }
 //----------------------------------------------------------------------------------------------------------------------
-  Measure::Measure(unsigned iterations) noexcept :
-    _iterations(iterations),
-    _tot_format((iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+  Measure::Measure(
+    const unsigned iterations_
+  ) noexcept :
+    _iterations(iterations_),
+    _tot_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
-  Measure::Measure(unsigned iterations, const char* iteration_format) noexcept :
-    _iterations(iterations),
-    _iter_format((iteration_format[0] == '\0') ? nullptr : iteration_format),
-    _tot_format((iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+  Measure::Measure(
+    const unsigned    iterations_,
+    const char* const iteration_format_
+  ) noexcept :
+    _iterations(iterations_),
+    _iter_format((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
+    _tot_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
-  Measure::Measure(unsigned iterations, const char* iteration_format, const char* total_format) noexcept :
-    _iterations(iterations),
-    _iter_format((iteration_format[0] == '\0') ? nullptr : iteration_format),
-    _tot_format((total_format[0] == '\0') ? nullptr : total_format)
+  Measure::Measure(
+    const unsigned    iterations_,
+    const char* const iteration_format_,
+    const char* const total_format_
+  ) noexcept :
+    _iterations(iterations_),
+    _iter_format((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
+    _tot_format((total_format_[0] == '\0') ? nullptr : total_format_)
   {}
 
   void Measure::pause() noexcept
@@ -657,11 +669,11 @@ namespace Chronometro
   void Measure::next() noexcept
   {
     _stopwatch.pause();
-    auto iter_duration = _stopwatch.lap();
+    const auto iter_duration = _stopwatch.lap();
 
     if (_iter_format)
     {
-      _backend_CHZ_DECLARE_LOCK(_backend::_out_mtx);
+      _chz_impl_DECLARE_LOCK(_backend::_out_mtx);
       _io::out << _backend::_format_lap(iter_duration, _iter_format, _iterations - _iters_left) << std::endl;
     }
 
@@ -672,26 +684,29 @@ namespace Chronometro
   bool Measure::good() noexcept
   {
     _stopwatch.pause();
-    if (_iters_left) _backend_CHZ_HOT
+    if (_iters_left) _chz_impl_HOT
     {
       _stopwatch.unpause();
       return true;
     }
 
-    auto duration = _stopwatch.split();
+    const auto duration = _stopwatch.split();
 
-    if (_tot_format) _backend_CHZ_HOT
+    if (_tot_format) _chz_impl_HOT
     {
-      _backend_CHZ_DECLARE_LOCK(_backend::_out_mtx);
+      _chz_impl_DECLARE_LOCK(_backend::_out_mtx);
       _io::out << _backend::_format_tot(duration, _tot_format, _iterations) << std::endl;
     }
 
     return false;
   }
 //----------------------------------------------------------------------------------------------------------------------
-  Measure::View::View(unsigned current_iteration, Measure* measurement) noexcept :
-    iteration(current_iteration),
-    _measurement(measurement)
+  Measure::View::View(
+    const unsigned current_iteration_,
+    Measure* const measurement_
+  ) noexcept :
+    iteration(current_iteration_),
+    _measurement(measurement_)
   {}
 
   void Measure::View::pause() noexcept
@@ -730,13 +745,13 @@ namespace Chronometro
   }
 }
 //----------------------------------------------------------------------------------------------------------------------
-# undef _backend_CHZ_PRAGMA
-# undef _backend_CHZ_IGNORE
-# undef _backend_CHZ_HOT
-# undef _backend_CHZ_COLD
-# undef _backend_CHZ_NODISCARD
-# undef _backend_CHZ_NODISCARD_REASON
-# undef _backend_CHZ_THREADLOCAL
-# undef _backend_CHZ_DECLARE_MUTEX
-# undef _backend_CHZ_DECLARE_LOCK
+# undef _chz_impl_PRAGMA
+# undef _chz_impl_IGNORE
+# undef _chz_impl_HOT
+# undef _chz_impl_COLD
+# undef _chz_impl_NODISCARD
+# undef _chz_impl_NODISCARD_REASON
+# undef _chz_impl_THREADLOCAL
+# undef _chz_impl_DECLARE_MUTEX
+# undef _chz_impl_DECLARE_LOCK
 #endif
