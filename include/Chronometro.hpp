@@ -37,12 +37,10 @@ Version 0.1.0 - Initial release
 Chronometro is a simple and lightweight C++11 (and newer) library that allows you to measure the
 execution time of code blocks and more. See the included README.MD file for more information.
 
-chz::Stopwatch;
-
 -----inclusion guard--------------------------------------------------------------------------------------------------*/
 #ifndef _chronometro_hpp
 #define _chronometro_hpp
-//---necessary libraries------------------------------------------------------------------------------------------------
+//---necessary standard libraries---------------------------------------------------------------------------------------
 #include <chrono>   // for std::chrono::steady_clock, std::chrono::high_resolution_clock, std::chrono::nanoseconds
 #include <ostream>  // for std::ostream
 #include <iostream> // for std::cout, std::endl
@@ -61,7 +59,16 @@ chz::Stopwatch;
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace Chronometro
 {
-  // units in which Time<> can be displayed
+  // measures the time it takes to execute the following statement/block n times, with labels
+# define CHRONOMETRO_MEASURE(...)
+
+  // measure elapsed time
+  class Stopwatch;
+
+  // measure iterations via range-based for-loop
+  class Measure;
+
+  // units in which _time<> can be displayed
   enum class Unit
   {
     ns,       // nanoseconds
@@ -73,25 +80,8 @@ namespace Chronometro
     automatic // deduce appropriate unit automatically
   };
 
-  // measures the time it takes to execute the following statement/block n times, with labels
-# define CHRONOMETRO_MEASURE(...)
-
-  // // type returned by Stopwatch::split() and Stopwatch::lap()
-  // template<Unit U, unsigned D>
-  // class Time;
-
-  // measure elapsed time
-  class Stopwatch;
-
-  // measure iterations via range-based for-loop
-  class Measure;
-
   // execute following statement/blocks only if its last execution was atleast N milliseconds prior
 # define CHRONOMETRO_ONLY_EVERY_MS(N)
-
-  // // print time to ostream
-  // template<Unit U, unsigned D>
-  // std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept;
 
   namespace _io
   {
@@ -179,18 +169,22 @@ namespace Chronometro
 #endif
 
     template<Unit U, unsigned D>
-    class Time
+    class _time
     {
     public:
       std::chrono::nanoseconds nanoseconds;
 
       template<Unit U_, unsigned D_ = D>
-      inline // change format
-      auto format() noexcept -> Time<U_, D_>;
+      auto format() noexcept -> _time<U_, D_>
+      {
+        return reinterpret_cast<_time<U_, D_>&>(*this);
+      }
 
       template<unsigned D_, Unit U_ = U>
-      inline // change format
-      auto format() noexcept -> Time<U_, D_>;
+      auto format() noexcept -> _time<U_, D_>
+      {
+        return reinterpret_cast<_time<U_, D_>&>(*this);
+      }
     };
 
     _backend_CHZ_DECLARE_MUTEX(_out_mtx);
@@ -215,7 +209,7 @@ namespace Chronometro
 #   undef _backend_CHZ_MAKE_UNIT_HELPER_SPECIALIZATION
 
     template<Unit U, unsigned D>
-    const char* _time_as_cstring(Time<U, D> time)
+    const char* _time_as_cstring(_time<U, D> time)
     {
       static_assert(D <= 3, "_backend::_time_as_string: too many decimals requested");
 
@@ -234,44 +228,44 @@ namespace Chronometro
     }
 
     template<unsigned D>
-    const char* _time_as_cstring(Time<Unit::automatic, D> time)
+    const char* _time_as_cstring(_time<Unit::automatic, D> time)
     {
       // 10 h < duration
       if (time.nanoseconds.count() > 36000000000000) _backend_CHZ_COLD
       {
-        return _time_as_cstring(Time<Unit::h, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::h, D>{time.nanoseconds});
       }
 
       // 10 min < duration <= 10 h
       if (time.nanoseconds.count() > 600000000000) _backend_CHZ_COLD
       {
-        return _time_as_cstring(Time<Unit::min, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::min, D>{time.nanoseconds});
       }
 
       // 10 s < duration <= 10 m
       if (time.nanoseconds.count() > 10000000000)
       {
-        return _time_as_cstring(Time<Unit::s, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::s, D>{time.nanoseconds});
       }
 
       // 10 ms < duration <= 10 s
       if (time.nanoseconds.count() > 10000000)
       {
-        return _time_as_cstring(Time<Unit::ms, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::ms, D>{time.nanoseconds});
       }
 
       // 10 us < duration <= 10 ms
       if (time.nanoseconds.count() > 10000)
       {
-        return _time_as_cstring(Time<Unit::us, D>{time.nanoseconds});
+        return _time_as_cstring(_time<Unit::us, D>{time.nanoseconds});
       }
 
       // duration <= 10 us
-      return _time_as_cstring(Time<Unit::ns, D>{time.nanoseconds});
+      return _time_as_cstring(_time<Unit::ns, D>{time.nanoseconds});
     }
 
     template<Unit U, unsigned D>
-    std::string _format_time(Time<U, D> time, std::string&& format) noexcept
+    std::string _format_time(_time<U, D> time, std::string&& format) noexcept
     {
       static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
 
@@ -290,7 +284,7 @@ namespace Chronometro
     }
 
     template<Unit U, unsigned D>
-    std::string _format_lap(Time<U, D> time, std::string&& format, unsigned iteration) noexcept
+    std::string _format_lap(_time<U, D> time, std::string&& format, unsigned iteration) noexcept
     {
       auto position = format.find("%#");
       while (position != std::string::npos)
@@ -303,7 +297,7 @@ namespace Chronometro
     }
 
     template<Unit U, unsigned D>
-    std::string _format_tot(Time<U, D> time, std::string&& format, unsigned iterations) noexcept
+    std::string _format_tot(_time<U, D> time, std::string&& format, unsigned iterations) noexcept
     {
       format = _format_time(time, std::move(format));
 
@@ -319,11 +313,11 @@ namespace Chronometro
         iterations = 1;
       }
 
-      return _format_time(Time<U, 3>{time.nanoseconds/iterations}, std::move(format));
+      return _format_time(_time<U, 3>{time.nanoseconds/iterations}, std::move(format));
     }
     
     template<Unit U, unsigned D>
-    std::ostream& operator<<(std::ostream& ostream, Time<U, D> time) noexcept
+    std::ostream& operator<<(std::ostream& ostream, _time<U, D> time) noexcept
     {
       return ostream << "elapsed time: " << _backend::_time_as_cstring(time) << std::endl;
     }
@@ -345,11 +339,11 @@ namespace Chronometro
   public:
     _backend_CHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time
-    auto lap() noexcept -> _backend::Time<Unit::automatic, 0>;
+    auto lap() noexcept -> _backend::_time<Unit::automatic, 0>;
 
     _backend_CHZ_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
-    auto split() noexcept -> _backend::Time<Unit::automatic, 0>;
+    auto split() noexcept -> _backend::_time<Unit::automatic, 0>;
 
     inline // reset measured times
     void reset() noexcept;
@@ -372,22 +366,22 @@ namespace Chronometro
     template<Unit U, unsigned D = 0>
     _backend_CHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time with custom format
-    auto lap() noexcept -> _backend::Time<U, D>;
+    auto lap() noexcept -> _backend::_time<U, D>;
 
     template<unsigned D, Unit U = Unit::automatic>
     _backend_CHZ_NODISCARD_REASON("lap: not using the return value makes no sens")
     inline // display and return lap time with custom format
-    auto lap() noexcept -> _backend::Time<U, D>;
+    auto lap() noexcept -> _backend::_time<U, D>;
 
     template<Unit U, unsigned D = 0>
     _backend_CHZ_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time with custom format
-    auto split() noexcept -> _backend::Time<U, D>;
+    auto split() noexcept -> _backend::_time<U, D>;
 
     template<unsigned D, Unit U = Unit::automatic>
     _backend_CHZ_NODISCARD_REASON("split: not using the return value makes no sens")
     inline // display and return split time
-    auto split() noexcept -> _backend::Time<U, D>;
+    auto split() noexcept -> _backend::_time<U, D>;
   };
 
   class Measure
@@ -530,27 +524,13 @@ namespace Chronometro
     Measure* const _measure = nullptr;
   };
 //----------------------------------------------------------------------------------------------------------------------
-  template<Unit U, unsigned D>
-  template<Unit U_, unsigned D_>
-  auto _backend::Time<U, D>::format() noexcept -> _backend::Time<U_, D_>
-  {
-    return reinterpret_cast<Time<U_, D_>&>(*this);
-  }
-
-  template<Unit U, unsigned D>
-  template<unsigned D_, Unit U_>
-  auto _backend::Time<U, D>::format() noexcept -> _backend::Time<U_, D_>
-  {
-    return reinterpret_cast<Time<U_, D_>&>(*this);
-  }
-//----------------------------------------------------------------------------------------------------------------------
-  auto Stopwatch::lap() noexcept -> _backend::Time<Unit::automatic, 0>
+  auto Stopwatch::lap() noexcept -> _backend::_time<Unit::automatic, 0>
   {
     return lap<Unit::automatic, 0>();
   }
   
   template<Unit U, unsigned D>
-  auto Stopwatch::lap() noexcept -> _backend::Time<U, D>
+  auto Stopwatch::lap() noexcept -> _backend::_time<U, D>
   {
     auto now = _backend::_clock::now();
 
@@ -565,22 +545,22 @@ namespace Chronometro
       _previous = _backend::_clock::now(); // start measurement from here
     }
 
-    return _backend::Time<U, D>{lap_duration};
+    return _backend::_time<U, D>{lap_duration};
   }
 
   template<unsigned D, Unit U>
-  auto Stopwatch::lap() noexcept -> _backend::Time<U, D>
+  auto Stopwatch::lap() noexcept -> _backend::_time<U, D>
   {
     return lap<U, D>();
   }
 
-  auto Stopwatch::split() noexcept -> _backend::Time<Unit::automatic, 0>
+  auto Stopwatch::split() noexcept -> _backend::_time<Unit::automatic, 0>
   {
     return split<Unit::automatic, 0>();
   }
 
   template<Unit U, unsigned D>
-  auto Stopwatch::split() noexcept -> _backend::Time<U, D>
+  auto Stopwatch::split() noexcept -> _backend::_time<U, D>
   {
     auto now = _backend::_clock::now();
 
@@ -594,11 +574,11 @@ namespace Chronometro
       _duration_tot = {};
     }
 
-    return _backend::Time<U, D>{tot_duration};
+    return _backend::_time<U, D>{tot_duration};
   }
 
   template<unsigned D, Unit U>
-  auto Stopwatch::split() noexcept -> _backend::Time<U, D>
+  auto Stopwatch::split() noexcept -> _backend::_time<U, D>
   {
     return split<U, D>();
   }
