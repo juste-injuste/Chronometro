@@ -90,10 +90,10 @@ namespace Chronometro
 
   namespace _version
   {
-    constexpr long major  = 000;
-    constexpr long minor  = 001;
-    constexpr long patch  = 000;
-    constexpr long number = (major * 1000 + minor) * 1000 + patch;
+    constexpr long MAJOR  = 000;
+    constexpr long MINOR  = 001;
+    constexpr long PATCH  = 000;
+    constexpr long NUMBER = (MAJOR * 1000 + MINOR) * 1000 + PATCH;
   }
 //---Chronometro library: backend---------------------------------------------------------------------------------------
   namespace _backend
