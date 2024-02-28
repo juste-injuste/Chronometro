@@ -100,18 +100,18 @@ namespace Chronometro
   {
 # if defined(__clang__)
 #   define _chz_impl_PRAGMA(PRAGMA) _Pragma(#PRAGMA)
-#   define _chz_impl_IGNORE(WARNING, ...)                \
+#   define _chz_impl_CLANG_IGNORE(WARNING, ...)          \
       _chz_impl_PRAGMA(clang diagnostic push)            \
       _chz_impl_PRAGMA(clang diagnostic ignored WARNING) \
-      __VA_ARGS__                                   \
+      __VA_ARGS__                                        \
       _chz_impl_PRAGMA(clang diagnostic pop)
 #endif
 
 // support from clang 12.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 12)
 # if __cplusplus < 202002L
-#   define _chz_impl_HOT  _chz_impl_IGNORE("-Wc++20-extensions", [[likely]])
-#   define _chz_impl_COLD _chz_impl_IGNORE("-Wc++20-extensions", [[unlikely]])
+#   define _chz_impl_HOT  _chz_impl_CLANG_IGNORE("-Wc++20-extensions", [[likely]])
+#   define _chz_impl_COLD _chz_impl_CLANG_IGNORE("-Wc++20-extensions", [[unlikely]])
 # else
 #   define _chz_impl_HOT  [[likely]]
 #   define _chz_impl_COLD [[unlikely]]
@@ -136,7 +136,7 @@ namespace Chronometro
 // support from clang 10.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 10)
 # if __cplusplus < 202002L
-#   define _chz_impl_NODISCARD_REASON(REASON) _chz_impl_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
+#   define _chz_impl_NODISCARD_REASON(REASON) _chz_impl_CLANG_IGNORE("-Wc++20-extensions", [[nodiscard(REASON)]])
 # else
 #   define _chz_impl_NODISCARD_REASON(REASON) [[nodiscard(REASON)]]
 # endif
@@ -746,7 +746,7 @@ namespace Chronometro
 }
 //----------------------------------------------------------------------------------------------------------------------
 # undef _chz_impl_PRAGMA
-# undef _chz_impl_IGNORE
+# undef _chz_impl_CLANG_IGNORE
 # undef _chz_impl_HOT
 # undef _chz_impl_COLD
 # undef _chz_impl_NODISCARD
