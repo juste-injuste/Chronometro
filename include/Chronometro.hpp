@@ -455,10 +455,10 @@ namespace Chronometro
       if ((Chronometro::_backend::_clock::now() - _previous) > _target)                             \
       {                                                                                             \
         _previous = Chronometro::_backend::_clock::now();                                           \
-        return true;                                                                                \
+        return false;                                                                               \
       }                                                                                             \
-      return false;                                                                                 \
-    }())
+      return true;                                                                                  \
+    }()) {} else
 //----------------------------------------------------------------------------------------------------------------------
   namespace _backend
   {
