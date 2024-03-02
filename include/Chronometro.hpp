@@ -83,6 +83,9 @@ namespace Chronometro
   // execute following statement/blocks only if its last execution was atleast N milliseconds prior
 # define CHRONOMETRO_ONLY_EVERY_MS(N)
 
+  // break out of loop after this is reached N times
+# define CHRONOMETRO_BREAK_AFTER(N)
+
   namespace _io
   {
     static std::ostream out(std::cout.rdbuf()); // output ostream
@@ -110,18 +113,18 @@ namespace Chronometro
 // support from clang 12.0.0 and GCC 10.1 onward
 # if defined(__clang__) and (__clang_major__ >= 12)
 # if __cplusplus < 202002L
-#   define _chz_impl_HOT  _chz_impl_CLANG_IGNORE("-Wc++20-extensions", [[likely]])
-#   define _chz_impl_COLD _chz_impl_CLANG_IGNORE("-Wc++20-extensions", [[unlikely]])
+#   define _chz_impl_LIKELY   _chz_impl_CLANG_IGNORE("-Wc++20-extensions", [[likely]])
+#   define _chz_impl_UNLIKELY _chz_impl_CLANG_IGNORE("-Wc++20-extensions", [[unlikely]])
 # else
-#   define _chz_impl_HOT  [[likely]]
-#   define _chz_impl_COLD [[unlikely]]
+#   define _chz_impl_LIKELY   [[likely]]
+#   define _chz_impl_UNLIKELY [[unlikely]]
 # endif
 # elif defined(__GNUC__) and (__GNUC__ >= 10)
-#   define _chz_impl_HOT  [[likely]]
-#   define _chz_impl_COLD [[unlikely]]
+#   define _chz_impl_LIKELY   [[likely]]
+#   define _chz_impl_UNLIKELY [[unlikely]]
 # else
-#   define _chz_impl_HOT
-#   define _chz_impl_COLD
+#   define _chz_impl_LIKELY
+#   define _chz_impl_UNLIKELY
 # endif
 
 // support from clang 3.9.0 and GCC 5.1 onward
@@ -232,13 +235,13 @@ namespace Chronometro
     const char* _time_as_cstring(const _time<Unit::automatic, n_decimals> time_) noexcept
     {
       // 10 h < duration
-      if (time_.nanoseconds.count() > 36000000000000) _chz_impl_COLD
+      if (time_.nanoseconds.count() > 36000000000000) _chz_impl_UNLIKELY
       {
         return _time_as_cstring(_time<Unit::h, n_decimals>{time_.nanoseconds});
       }
 
       // 10 min < duration <= 10 h
-      if (time_.nanoseconds.count() > 600000000000) _chz_impl_COLD
+      if (time_.nanoseconds.count() > 600000000000) _chz_impl_UNLIKELY
       {
         return _time_as_cstring(_time<Unit::min, n_decimals>{time_.nanoseconds});
       }
@@ -308,7 +311,7 @@ namespace Chronometro
         position = fmt_.find("%D");
       }
 
-      if (n_iters_ == 0) _chz_impl_COLD
+      if (n_iters_ == 0) _chz_impl_UNLIKELY
       {
         n_iters_ = 1;
       }
@@ -459,6 +462,15 @@ namespace Chronometro
       }                                                                                             \
       return true;                                                                                  \
     }()) {} else
+
+# undef  CHRONOMETRO_BREAK_AFTER
+# define CHRONOMETRO_BREAK_AFTER(N)                                                             \
+    if ([]{                                                                                     \
+      static_assert(N > 0, "CHRONOMETRO_BREAK_AFTER: 'N' must be a non-zero positive number."); \
+      static auto  _n = N;                                                                      \
+      if (_n == 0) _n = N;                                                                      \
+      return --_n;                                                                              \
+    }()) {} else break
 //----------------------------------------------------------------------------------------------------------------------
   namespace _backend
   {
@@ -539,7 +551,7 @@ namespace Chronometro
     std::chrono::nanoseconds lap_duration = _duration_lap;
     _duration_lap = {};
 
-    if (not _is_paused) _chz_impl_HOT
+    if (not _is_paused) _chz_impl_LIKELY
     {
       _duration_tot += now - _previous;
       lap_duration  += now - _previous;
@@ -568,7 +580,7 @@ namespace Chronometro
 
     std::chrono::nanoseconds tot_duration = _duration_tot;
 
-    if (not _is_paused) _chz_impl_HOT
+    if (not _is_paused) _chz_impl_LIKELY
     {
       tot_duration += now - _previous;
 
@@ -601,7 +613,7 @@ namespace Chronometro
   {
     const auto now = _backend::_clock::now();
 
-    if (not _is_paused) _chz_impl_HOT
+    if (not _is_paused) _chz_impl_LIKELY
     {
       _is_paused = true;
 
@@ -612,7 +624,7 @@ namespace Chronometro
 
   void Stopwatch::unpause() noexcept
   {
-    if (_is_paused) _chz_impl_HOT
+    if (_is_paused) _chz_impl_LIKELY
     {
       _is_paused = false;
 
@@ -684,7 +696,7 @@ namespace Chronometro
   bool Measure::good() noexcept
   {
     _stopwatch.pause();
-    if (_iters_left) _chz_impl_HOT
+    if (_iters_left) _chz_impl_LIKELY
     {
       _stopwatch.unpause();
       return true;
@@ -692,7 +704,7 @@ namespace Chronometro
 
     const auto duration = _stopwatch.split();
 
-    if (_tot_format) _chz_impl_HOT
+    if (_tot_format) _chz_impl_LIKELY
     {
       _chz_impl_DECLARE_LOCK(_backend::_out_mtx);
       _io::out << _backend::_format_tot(duration, _tot_format, _iterations) << std::endl;
@@ -747,8 +759,8 @@ namespace Chronometro
 //----------------------------------------------------------------------------------------------------------------------
 # undef _chz_impl_PRAGMA
 # undef _chz_impl_CLANG_IGNORE
-# undef _chz_impl_HOT
-# undef _chz_impl_COLD
+# undef _chz_impl_LIKELY
+# undef _chz_impl_UNLIKELY
 # undef _chz_impl_NODISCARD
 # undef _chz_impl_NODISCARD_REASON
 # undef _chz_impl_THREADLOCAL
