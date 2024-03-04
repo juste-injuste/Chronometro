@@ -51,7 +51,6 @@ execution time of code blocks and more. See the included README.MD file for more
 #if not defined(CHRONOMETRO_CLOCK)
 # include <type_traits> // for std::conditional
 #endif
-
 #if defined(__STDCPP_THREADS__) and not defined(CHRONOMETRO_NOT_THREADSAFE)
 # define _chz_impl_THREADSAFE
 # include <mutex> // for std::mutex, std::lock_guard
@@ -365,26 +364,6 @@ namespace Chronometro
     std::chrono::nanoseconds     _duration_tot = {};
     std::chrono::nanoseconds     _duration_lap = {};
     _backend::_clock::time_point _previous     = _backend::_clock::now();
-  public: // extra overloads to make time formatting easier
-    template<Unit unit, unsigned n_decimals = 0>
-    _chz_impl_NODISCARD_REASON("lap: not using the return value makes no sens.")
-    inline // display and return lap time with custom format
-    auto lap() noexcept -> _backend::_time<unit, n_decimals>;
-
-    template<unsigned n_decimals, Unit unit = Unit::automatic>
-    _chz_impl_NODISCARD_REASON("lap: not using the return value makes no sens.")
-    inline // display and return lap time with custom format
-    auto lap() noexcept -> _backend::_time<unit, n_decimals>;
-
-    template<Unit unit, unsigned n_decimals = 0>
-    _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens.")
-    inline // display and return split time with custom format
-    auto split() noexcept -> _backend::_time<unit, n_decimals>;
-
-    template<unsigned n_decimals, Unit unit = Unit::automatic>
-    _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens.")
-    inline // display and return split time
-    auto split() noexcept -> _backend::_time<unit, n_decimals>;
   };
 
   class Measure
@@ -496,9 +475,7 @@ namespace Chronometro
   private:
     Stopwatch* const _stopwatch;
 
-    _guard(
-      Stopwatch* const stopwatch_
-    ) noexcept :
+    _guard(Stopwatch* const stopwatch_) noexcept :
       _stopwatch(stopwatch_)
     {
       _stopwatch->pause();
@@ -540,12 +517,6 @@ namespace Chronometro
 //----------------------------------------------------------------------------------------------------------------------
   auto Stopwatch::lap() noexcept -> _backend::_time<Unit::automatic, 0>
   {
-    return lap<Unit::automatic, 0>();
-  }
-  
-  template<Unit unit, unsigned n_decimals>
-  auto Stopwatch::lap() noexcept -> _backend::_time<unit, n_decimals>
-  {
     const auto now = _backend::_clock::now();
 
     std::chrono::nanoseconds lap_duration = _duration_lap;
@@ -559,22 +530,10 @@ namespace Chronometro
       _previous = _backend::_clock::now(); // start measurement from here
     }
 
-    return _backend::_time<unit, n_decimals>{lap_duration};
+    return _backend::_time<Unit::automatic, 0>{lap_duration};
   }
-
-  template<unsigned n_decimals, Unit unit>
-  auto Stopwatch::lap() noexcept -> _backend::_time<unit, n_decimals>
-  {
-    return lap<unit, n_decimals>();
-  }
-
+  
   auto Stopwatch::split() noexcept -> _backend::_time<Unit::automatic, 0>
-  {
-    return split<Unit::automatic, 0>();
-  }
-
-  template<Unit unit, unsigned n_decimals>
-  auto Stopwatch::split() noexcept -> _backend::_time<unit, n_decimals>
   {
     const auto now = _backend::_clock::now();
 
@@ -588,13 +547,7 @@ namespace Chronometro
       _duration_tot = {};
     }
 
-    return _backend::_time<unit, n_decimals>{tot_duration};
-  }
-
-  template<unsigned n_decimals, Unit unit>
-  auto Stopwatch::split() noexcept -> _backend::_time<unit, n_decimals>
-  {
-    return split<unit, n_decimals>();
+    return _backend::_time<Unit::automatic, 0>{tot_duration};
   }
 
   void Stopwatch::reset() noexcept

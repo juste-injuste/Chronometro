@@ -22,6 +22,7 @@ int main()
   std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
   sleep_for_ms(250);
+
   std::cout << stopwatch.split().format<Chronometro::Unit::us>(); // prints ~"elapsed time: 250000 ns"
   stopwatch.pause();
   std::cout << stopwatch.split().format<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
