@@ -2,7 +2,7 @@
 
 int test()
 {
-  Chronometro::Stopwatch stopwatch;
+  chz::Stopwatch stopwatch;
 
   return 0;
 }

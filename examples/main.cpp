@@ -10,51 +10,54 @@ inline void sleep_for_ms(std::chrono::high_resolution_clock::rep ms)
 
 int main()
 {
-  Chronometro::Stopwatch stopwatch;
+  chz::Stopwatch stopwatch;
   sleep_for_ms(30);
   stopwatch.pause();
-  sleep_for_ms(500); // not measured by the stopwatch
+  sleep_for_ms(50); // not measured by the stopwatch
   stopwatch.unpause();
   sleep_for_ms(70);
-  std::cout << stopwatch.lap<3, Chronometro::Unit::us>(); // prints ~"elapsed time: 100000.000 us"
+
+  // this print operations are guarded to avoid measuring unwanted
+  // prints ~"elapsed time: 100000.000 us"
+  stopwatch.guard(), std::cout << stopwatch.lap().format<3, chz::Unit::us>();
   sleep_for_ms(80);
-  std::cout << stopwatch.lap();   // prints ~"elapsed time: 80 ms"
-  std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
+  stopwatch.guard(), std::cout << stopwatch.lap();   // prints ~"elapsed time: 80 ms"
+  stopwatch.guard(), std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
   sleep_for_ms(250);
 
-  std::cout << stopwatch.split().format<Chronometro::Unit::us>(); // prints ~"elapsed time: 250000 ns"
+  std::cout << stopwatch.split().format<chz::Unit::us>(); // prints ~"elapsed time: 250000 ns"
   stopwatch.pause();
   std::cout << stopwatch.split().format<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE()
+  CHZ_MEASURE()
   std::cout << "once\n";
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(2)
+  CHZ_MEASURE(2)
   std::cout << "twice\n";
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(3, "iteration %# took %us")
+  CHZ_MEASURE(3, "iteration %# took %us")
   std::cout << "thrice\n";
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(4, "iteration %# took %us",  "took %us overall")
+  CHZ_MEASURE(4, "iteration %# took %us",  "took %us overall")
   std::cout << "four times\n";
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(5, "",  "took %us overall")
+  CHZ_MEASURE(5, "",  "took %us overall")
   std::cout << "five times\n";
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(1, "", "should take ~800 ms, took %ms")
+  CHZ_MEASURE(1, "", "should take ~800 ms, took %ms")
   {
     unsigned inner_loops = 0, outer_loops = 0;
     while (inner_loops < 5)
     {
       ++outer_loops;
-      CHRONOMETRO_ONLY_EVERY_MS(200) // first execution does not wait 200 ms
+      CHZ_ONLY_EVERY_MS(200) // first execution does not wait 200 ms
       {
         ++inner_loops;
         std::cout << "executing inner loop...\n"; // measured
@@ -66,7 +69,7 @@ int main()
   }
 
   std::cout << '\n';
-  for (auto measurement : Chronometro::Measure(4, "iteration %# took %ms", "iterations took %ms"))
+  for (auto measurement : chz::Measure(4, "iteration %# took %ms", "iterations took %ms"))
   {
     measurement.guard(), std::cout << "currently doing iteration #" << measurement.iteration << '\n';
 
@@ -74,13 +77,13 @@ int main()
   }
 
   std::cout << '\n';
-  CHRONOMETRO_MEASURE(100, "", "average iteration took %Dms")
+  CHZ_MEASURE(100, "", "average iteration took %Dms")
   {
     sleep_for_ms(1);
   }
 
   std::cout << '\n';
-  for (auto measurement : Chronometro::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
+  for (auto measurement : chz::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
   {
     sleep_for_ms(7); // measured
 
