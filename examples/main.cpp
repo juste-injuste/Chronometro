@@ -1,30 +1,24 @@
+#define CHZ_NOT_THREADSAFE
 #include "Chronometro.hpp"
 #include <iostream>
-
-// scuffed sleep function to demonstrate the basic usage of the library
-inline void sleep_for_ms(std::chrono::high_resolution_clock::rep ms)
-{
-  std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-  while (std::chrono::nanoseconds(std::chrono::high_resolution_clock::now()-start).count() < ms*1000000);
-}
 
 int main()
 {
   chz::Stopwatch stopwatch;
-  sleep_for_ms(30);
+  chz::sleep(30);
   stopwatch.pause();
-  sleep_for_ms(50); // not measured by the stopwatch
+  chz::sleep(50); // not measured by the stopwatch
   stopwatch.unpause();
-  sleep_for_ms(70);
+  chz::sleep(70);
 
   // this print operations are guarded to avoid measuring unwanted
   // prints ~"elapsed time: 100000.000 us"
   stopwatch.guard(), std::cout << stopwatch.lap().format<3, chz::Unit::us>();
-  sleep_for_ms(80);
+  chz::sleep(80);
   stopwatch.guard(), std::cout << stopwatch.lap();   // prints ~"elapsed time: 80 ms"
   stopwatch.guard(), std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
-  sleep_for_ms(250);
+  chz::sleep(250);
 
   std::cout << stopwatch.split().format<chz::Unit::us>(); // prints ~"elapsed time: 250000 ns"
   stopwatch.pause();
@@ -57,7 +51,7 @@ int main()
     while (inner_loops < 5)
     {
       ++outer_loops;
-      CHZ_ONLY_EVERY_MS(200) // first execution does not wait 200 ms
+      CHZ_ONLY_EVERY(200) // first execution does not wait 200 ms
       {
         ++inner_loops;
         std::cout << "executing inner loop...\n"; // measured
@@ -73,36 +67,41 @@ int main()
   {
     measurement.guard(), std::cout << "currently doing iteration #" << measurement.iteration << '\n';
 
-    sleep_for_ms(100);
+    chz::sleep(100);
   }
 
   std::cout << '\n';
   CHZ_MEASURE(100, "", "average iteration took %Dms")
   {
-    sleep_for_ms(1);
+    chz::sleep(1);
+  }
+
+  CHZ_LOOP_FOR(10)
+  {
+    CHZ_BREAK_AFTER(5);
   }
 
   std::cout << '\n';
   for (auto measurement : chz::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
   {
-    sleep_for_ms(7); // measured
+    chz::sleep(7); // measured
 
-    measurement.guard(), sleep_for_ms(50); // not measured
+    measurement.guard(), chz::sleep(50); // not measured
 
-    sleep_for_ms(1); // measured
+    chz::sleep(1); // measured
 
     {
       auto guard = measurement.guard();
-      sleep_for_ms(10); // not measured
-      sleep_for_ms(5);  // not measured
+      chz::sleep(10); // not measured
+      chz::sleep(5);  // not measured
     }
 
-    sleep_for_ms(1); // measured
+    chz::sleep(1); // measured
 
     measurement.pause();
-    sleep_for_ms(100); // not measured
+    chz::sleep(100); // not measured
 
     measurement.unpause();
-    sleep_for_ms(2); // measured
+    chz::sleep(2); // measured
   }
 }

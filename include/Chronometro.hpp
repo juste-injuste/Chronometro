@@ -53,7 +53,7 @@ execution time of code blocks and more. See the included README.MD file for more
 #endif
 #if defined(__STDCPP_THREADS__) and not defined(CHZ_NOT_THREADSAFE)
 # define _chz_impl_THREADSAFE
-# include <mutex>  // for std::mutex, std::lock_guard
+# include <mutex> // for std::mutex, std::lock_guard
 #endif
 //---Chronometro library------------------------------------------------------------------------------------------------
 namespace chz
@@ -79,10 +79,17 @@ namespace chz
     automatic // deduce appropriate unit automatically
   };
 
-  // execute following statement/blocks only if its last execution was atleast N milliseconds prior
-# define CHZ_ONLY_EVERY_MS(N)
+  // pause thread for 'amount' 'unit's of time a desired amount of time
+  template<Unit unit = Unit::ms>
+  void sleep(unsigned amount) noexcept;
 
-  // break out of loop after this is reached N times
+  // execute the following only if its last execution was atleast 'MS' milliseconds prior
+# define CHZ_ONLY_EVERY(MS)
+
+  // execute the following 'N' times
+# define CHZ_LOOP_FOR(N)
+
+  // break out of a loop reached 'N' times
 # define CHZ_BREAK_AFTER(N)
 
   namespace _io
@@ -168,7 +175,7 @@ namespace chz
 #else
 # define _chz_impl_THREADLOCAL
 # define _chz_impl_DECLARE_MUTEX(...)
-# define _chz_impl_DECLARE_LOCK(MUTEX) void(0)
+# define _chz_impl_DECLARE_LOCK(MUTEX)
 #endif
 
   // clock used to measure time
@@ -210,8 +217,8 @@ namespace chz
       template<>                                                          \
       struct _unit_helper<UNIT>                                           \
       {                                                                   \
-        static constexpr const char* label  = LABEL;                      \
-        static constexpr double      factor = FACTOR;                     \
+        static constexpr const char*        label  = LABEL;               \
+        static constexpr unsigned long long factor = FACTOR;              \
       }
     
     _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::ns,  "ns",  1);
@@ -336,16 +343,16 @@ namespace chz
       return _format_time(_time<unit, 3>{time_.nanoseconds/n_iters_}, std::move(fmt_));
     }
 
-    struct _measure_backdoor;
+    struct _backdoor;
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHZ_MEASURE
-# define CHZ_MEASURE(...)                 _chz_impl_MEASURE_PROX(__LINE__,    __VA_ARGS__)
+# define CHZ_MEASURE(...)                         _chz_impl_MEASURE_PROX(__LINE__,    __VA_ARGS__)
 # define _chz_impl_MEASURE_PROX(line_number, ...) _chz_impl_MEASURE_IMPL(line_number, __VA_ARGS__)
-# define _chz_impl_MEASURE_IMPL(line_number, ...)                     \
-    for (chz::Measure _measurement##line_number{__VA_ARGS__};         \
-      chz::_impl::_measure_backdoor::good(_measurement##line_number); \
-      chz::_impl::_measure_backdoor::next(_measurement##line_number))
+# define _chz_impl_MEASURE_IMPL(line_number, ...)                  \
+    for (chz::Measure _chz_impl_measure##line_number{__VA_ARGS__}; \
+      chz::_impl::_backdoor::good(_chz_impl_measure##line_number); \
+      chz::_impl::_backdoor::next(_chz_impl_measure##line_number))
 
   class Stopwatch
   {
@@ -372,9 +379,9 @@ namespace chz
     auto guard() noexcept -> _guard;
     
   private:
-    bool                         _is_paused    = false;
-    std::chrono::nanoseconds     _duration_tot = {};
-    std::chrono::nanoseconds     _duration_lap = {};
+    bool                      _is_paused    = false;
+    std::chrono::nanoseconds  _duration_tot = {};
+    std::chrono::nanoseconds  _duration_lap = {};
     _impl::_clock::time_point _previous     = _impl::_clock::now();
   };
 
@@ -417,7 +424,7 @@ namespace chz
     inline _view view() noexcept;
     inline void  next() noexcept;
     inline bool  good() noexcept;
-  friend _impl::_measure_backdoor;
+  friend _impl::_backdoor;
   };
 
   class Measure::_view final
@@ -440,32 +447,56 @@ namespace chz
     Measure* const _measurement;
   };
 
-# undef  CHZ_ONLY_EVERY_MS
-# define CHZ_ONLY_EVERY_MS(N)                                                               \
-    if ([]{                                                                                 \
-      static_assert((N) > 0, "CHZ_ONLY_EVERY_MS: 'N' must be a non-zero positive number."); \
-      static chz::_impl::_clock::time_point _previous = {};                                 \
-      const auto _target = std::chrono::nanoseconds{(N)*1000000};                           \
-      if ((chz::_impl::_clock::now() - _previous) > _target)                                \
-      {                                                                                     \
-        _previous = chz::_impl::_clock::now();                                              \
-        return false;                                                                       \
-      }                                                                                     \
-      return true;                                                                          \
+  template<Unit unit>
+  void sleep(const unsigned amount_) noexcept
+  {
+    const auto span = std::chrono::nanoseconds{_impl::_unit_helper<unit>::factor * amount_};
+    const auto goal = span + _impl::_clock::now();
+    while (_impl::_clock::now() < goal);
+  }
+
+  template<>
+  void sleep<Unit::automatic>(unsigned) noexcept = delete;
+
+# undef  CHZ_ONLY_EVERY
+# define CHZ_ONLY_EVERY(MS)                  _chz_impl_ONLY_EVERY_PROX(__LINE__, MS)
+# define _chz_impl_ONLY_EVERY_PROX(line, MS) _chz_impl_ONLY_EVERY_IMPL(line,     MS)
+# define _chz_impl_ONLY_EVERY_IMPL(line, MS)                                             \
+    if ([]{                                                                              \
+      static_assert(MS > 0, "CHZ_ONLY_EVERY: 'MS' must be a non-zero positive number."); \
+      static auto _chz_impl_prev##line = chz::_impl::_clock::time_point{};               \
+      const  auto _chz_impl_goal##line = std::chrono::nanoseconds{(MS)*1000000};         \
+      if ((chz::_impl::_clock::now() - _chz_impl_prev##line) > _chz_impl_goal##line)     \
+      {                                                                                  \
+        _chz_impl_prev##line = chz::_impl::_clock::now();                                \
+        return false;                                                                    \
+      }                                                                                  \
+      return true;                                                                       \
     }()) {} else
 
+# undef  CHZ_LOOP_FOR
+# define CHZ_LOOP_FOR(N)                  _chz_impl_LOOP_FOR_PROX(__LINE__, N)
+# define _chz_impl_LOOP_FOR_PROX(line, N) _chz_impl_LOOP_FOR_IMPL(line,     N)
+# define _chz_impl_LOOP_FOR_IMPL(line, N)                                            \
+    for (unsigned long long _chz_impl_loop_for##line = [&]{                          \
+      static_assert(N > 0, "CHZ_LOOP_FOR: 'N' must be a non-zero positive number."); \
+      return N; }(); _chz_impl_loop_for##line; --_chz_impl_loop_for##line)
+
+  
 # undef  CHZ_BREAK_AFTER
-# define CHZ_BREAK_AFTER(N)                                                             \
+# define CHZ_BREAK_AFTER(N)                  _chz_impl_BREAK_AFTER_PROX(__LINE__, N)
+# define _chz_impl_BREAK_AFTER_PROX(line, N) _chz_impl_BREAK_AFTER_IMPL(line,     N)
+# define _chz_impl_BREAK_AFTER_IMPL(line, N)                                            \
     if ([]{                                                                             \
       static_assert(N > 0, "CHZ_BREAK_AFTER: 'N' must be a non-zero positive number."); \
-      static auto  _n = N;                                                              \
-      if (_n == 0) _n = N;                                                              \
-      return --_n;                                                                      \
+      static unsigned long long _chz_impl_break_after##line = N;                        \
+      if (_chz_impl_break_after##line == 0) _chz_impl_break_after##line = N;            \
+      return --_chz_impl_break_after##line;                                             \
     }()) {} else break
 //----------------------------------------------------------------------------------------------------------------------
   namespace _impl
   {
-    struct _measure_backdoor
+    struct _backdoor
     {
       static
       bool good(Measure& measure_) noexcept
