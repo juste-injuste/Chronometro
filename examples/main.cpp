@@ -11,9 +11,8 @@ int main()
   stopwatch.unpause();
   chz::sleep(70);
 
-  // this print operations are guarded to avoid measuring unwanted
-  // prints ~"elapsed time: 100000.000 us"
-  stopwatch.guard(), std::cout << stopwatch.lap().format<3, chz::Unit::us>();
+  // these print operations are guarded to avoid measuring them
+  stopwatch.guard(), std::cout << stopwatch.lap().format<3, chz::Unit::us>(); // prints ~"elapsed time: 100000.000 us"
   chz::sleep(80);
   stopwatch.guard(), std::cout << stopwatch.lap();   // prints ~"elapsed time: 80 ms"
   stopwatch.guard(), std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
