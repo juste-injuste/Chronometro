@@ -461,17 +461,17 @@ namespace chz
 # undef  CHZ_ONLY_EVERY
 # define CHZ_ONLY_EVERY(MS)                  _chz_impl_ONLY_EVERY_PROX(__LINE__, MS)
 # define _chz_impl_ONLY_EVERY_PROX(line, MS) _chz_impl_ONLY_EVERY_IMPL(line,     MS)
-# define _chz_impl_ONLY_EVERY_IMPL(line, MS)                                             \
-    if ([]{                                                                              \
-      static_assert(MS > 0, "CHZ_ONLY_EVERY: 'MS' must be a non-zero positive number."); \
-      static auto _chz_impl_prev##line = chz::_impl::_clock::time_point{};               \
-      const  auto _chz_impl_goal##line = std::chrono::nanoseconds{(MS)*1000000};         \
-      if ((chz::_impl::_clock::now() - _chz_impl_prev##line) > _chz_impl_goal##line)     \
-      {                                                                                  \
-        _chz_impl_prev##line = chz::_impl::_clock::now();                                \
-        return false;                                                                    \
-      }                                                                                  \
-      return true;                                                                       \
+# define _chz_impl_ONLY_EVERY_IMPL(line, MS)                                               \
+    if ([]{                                                                                \
+      static_assert(MS > 0, "CHZ_ONLY_EVERY: 'MS' must be a non-zero positive number.");   \
+      constexpr auto _chz_impl_diff##line = std::chrono::nanoseconds{(MS)*1000000};        \
+      static auto _chz_impl_goal##line = chz::_impl::_clock::now() + _chz_impl_diff##line; \
+      if (chz::_impl::_clock::now() > _chz_impl_goal##line)                                \
+      {                                                                                    \
+        _chz_impl_goal##line = chz::_impl::_clock::now() + _chz_impl_diff##line;           \
+        return false;                                                                      \
+      }                                                                                    \
+      return true;                                                                         \
     }()) {} else
 
 # undef  CHZ_LOOP_FOR
