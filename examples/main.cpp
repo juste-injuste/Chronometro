@@ -8,20 +8,20 @@ int main()
   chz::sleep(30);
   stopwatch.pause();
   chz::sleep(50); // not measured by the stopwatch
-  stopwatch.unpause();
+  stopwatch.start();
   chz::sleep(70);
 
-  // these print operations are guarded to avoid measuring them
-  stopwatch.guard(), std::cout << stopwatch.split().format<3, chz::Unit::us>(); // prints ~"elapsed time: 100000.000 us"
+  // these print operations are avoided to avoid measuring them
+  stopwatch.avoid(), std::cout << stopwatch.split().style<3, chz::Unit::us>(); // prints ~"elapsed time: 100000.000 us"
   chz::sleep(80);
-  stopwatch.guard(), std::cout << stopwatch.split();   // prints ~"elapsed time: 80 ms"
-  stopwatch.guard(), std::cout << stopwatch.total(); // prints ~"elapsed time: 180 ms"
+  stopwatch.avoid(), std::cout << stopwatch.split(); // prints ~"elapsed time: 80 ms"
+  stopwatch.avoid(), std::cout << stopwatch.total(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
   chz::sleep(250);
 
-  std::cout << stopwatch.total().format<chz::Unit::us>(); // prints ~"elapsed time: 250000 ns"
+  std::cout << stopwatch.total().style<chz::Unit::us>(); // prints ~"elapsed time: 250000 ns"
   stopwatch.pause();
-  std::cout << stopwatch.total().format<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
+  std::cout << stopwatch.total().style<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
 
   std::cout << '\n';
   CHZ_MEASURE()
@@ -64,7 +64,7 @@ int main()
   std::cout << '\n';
   for (auto measurement : chz::Measure(4, "iteration %# took %ms", "iterations took %ms"))
   {
-    measurement.guard(), std::cout << "currently doing iteration #" << measurement.iteration << '\n';
+    measurement.avoid(), std::cout << "currently doing iteration #" << measurement.iteration << '\n';
 
     chz::sleep(100);
   }
@@ -85,12 +85,12 @@ int main()
   {
     chz::sleep(7); // measured
 
-    measurement.guard(), chz::sleep(50); // not measured
+    measurement.avoid(), chz::sleep(50); // not measured
 
     chz::sleep(1); // measured
 
     {
-      auto guard = measurement.guard();
+      auto guard = measurement.avoid();
       chz::sleep(10); // not measured
       chz::sleep(5);  // not measured
     }
@@ -100,7 +100,7 @@ int main()
     measurement.pause();
     chz::sleep(100); // not measured
 
-    measurement.unpause();
+    measurement.start();
     chz::sleep(2); // measured
   }
 }

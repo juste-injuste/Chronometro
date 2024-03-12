@@ -37,7 +37,7 @@ Version 0.1.0 - Initial release
 Chronometro is a simple and lightweight C++11 (and newer) library that allows you to measure the
 execution time of code blocks and more. See the included README.MD file for more information.
 
------inclusion guard--------------------------------------------------------------------------------------------------*/
+-----inclusion avoid--------------------------------------------------------------------------------------------------*/
 #ifndef _chronometro_hpp
 #define _chronometro_hpp
 #if __cplusplus >= 201103L
@@ -198,16 +198,16 @@ namespace chz
       const std::chrono::nanoseconds nanoseconds;
 
       template<Unit unit_, unsigned n_decimals_ = n_decimals>
-      auto format() const noexcept -> const _time<unit_, n_decimals_>&
+      auto style() const noexcept -> const _time<unit_, n_decimals_>&
       {
-        static_assert(n_decimals <= 3, "format: too many decimals requested.");
+        static_assert(n_decimals <= 3, "style: too many decimals requested.");
         return reinterpret_cast<const _time<unit_, n_decimals_>&>(*this);
       }
 
       template<unsigned n_decimals_, Unit unit_ = unit>
-      auto format() const noexcept -> const _time<unit_, n_decimals_>&
+      auto style() const noexcept -> const _time<unit_, n_decimals_>&
       {
-        static_assert(n_decimals <= 3, "format: too many decimals requested.");
+        static_assert(n_decimals <= 3, "style: too many decimals requested.");
         return reinterpret_cast<const _time<unit_, n_decimals_>&>(*this);
       }
     };
@@ -376,10 +376,10 @@ namespace chz
     void pause() noexcept;
 
     inline // resume time measurement
-    void unpause() noexcept;
+    void start() noexcept;
 
-    inline // RAII-style scoped pause/unpause
-    auto guard() noexcept -> _guard;
+    inline // RAII-style scoped pause/start
+    auto avoid() noexcept -> _guard;
     
   private:
     bool                      _is_paused      = false;
@@ -408,10 +408,10 @@ namespace chz
     void pause() noexcept;
 
     inline // resume measurement
-    void unpause() noexcept;
+    void start() noexcept;
 
-    inline // scoped pause/unpause of measurement
-    auto guard() noexcept -> decltype(Stopwatch().guard());
+    inline // scoped pause/start of measurement
+    auto avoid() noexcept -> decltype(Stopwatch().avoid());
 
   private:
     const unsigned _iterations   = 1;
@@ -487,10 +487,10 @@ namespace chz
     void pause() noexcept;
 
     inline // resume measurement
-    void unpause() noexcept;
+    void start() noexcept;
 
-    inline // scoped pause/unpause of measurement
-    auto guard() noexcept -> decltype(Stopwatch().guard());
+    inline // scoped pause/start of measurement
+    auto avoid() noexcept -> decltype(Stopwatch().avoid());
   private:
     inline View(unsigned current_iteration, Measure* measurement) noexcept;
     Measure* const _measurement;
@@ -529,7 +529,7 @@ namespace chz
   public:
     ~_guard() noexcept
     {
-      _stopwatch->unpause();
+      _stopwatch->start();
     }
   };
 //----------------------------------------------------------------------------------------------------------------------
@@ -573,7 +573,7 @@ namespace chz
     _duration_total = {};
     _duration_split = {};
 
-    // hot reset if unpaused
+    // hot reset if startd
     if (!_is_paused)
     {
       _previous = _impl::_clock::now(); // start measurement from here
@@ -593,7 +593,7 @@ namespace chz
     }
   }
 
-  void Stopwatch::unpause() noexcept
+  void Stopwatch::start() noexcept
   {
     if _chz_impl_EXPECTED(_is_paused)
     {
@@ -603,7 +603,7 @@ namespace chz
     }
   }
 
-  auto Stopwatch::guard() noexcept -> _guard
+  auto Stopwatch::avoid() noexcept -> _guard
   {
     return _guard(this);
   }
@@ -659,9 +659,9 @@ namespace chz
     _stopwatch.pause();
   }
 
-  void Measure::unpause() noexcept
+  void Measure::start() noexcept
   {
-    _stopwatch.unpause();
+    _stopwatch.start();
   }
 
   auto Measure::view() noexcept -> View
@@ -671,7 +671,7 @@ namespace chz
 
   void Measure::next() noexcept
   {
-    const auto guard = _stopwatch.guard();
+    const auto avoid = _stopwatch.avoid();
     const auto split = _stopwatch.split();
 
     if (_format_split)
@@ -685,7 +685,7 @@ namespace chz
   
   bool Measure::good() noexcept
   {
-    const auto guard = _stopwatch.guard();
+    const auto avoid = _stopwatch.avoid();
 
     if _chz_impl_EXPECTED(_iters_left != 0)
     {
@@ -703,16 +703,16 @@ namespace chz
     return false;
   }
 
-  auto Measure::guard() noexcept -> decltype(Stopwatch().guard())
+  auto Measure::avoid() noexcept -> decltype(Stopwatch().avoid())
   {
-    return _stopwatch.guard();
+    return _stopwatch.avoid();
   }
 
   auto Measure::begin() noexcept -> _iter
   {
     _iters_left = _iterations;
 
-    _stopwatch.unpause();
+    _stopwatch.start();
     _stopwatch.reset();
 
     return _iter(this);
@@ -733,14 +733,14 @@ namespace chz
     _measurement->pause();
   }
 
-  void Measure::View::unpause() noexcept
+  void Measure::View::start() noexcept
   {
-    _measurement->unpause();
+    _measurement->start();
   }
 
-  auto Measure::View::guard() noexcept -> decltype(Stopwatch().guard())
+  auto Measure::View::avoid() noexcept -> decltype(Stopwatch().avoid())
   {
-    return _measurement->guard();
+    return _measurement->avoid();
   }
 }
 //----------------------------------------------------------------------------------------------------------------------
