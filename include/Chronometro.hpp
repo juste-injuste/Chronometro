@@ -361,13 +361,13 @@ namespace chz
   {
     class _guard;
   public:    
-    _chz_impl_NODISCARD_REASON("lap: not using the return value makes no sens")
-    inline // display and return lap time
-    auto lap() noexcept -> _impl::_time<Unit::automatic, 0>;
-
     _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens")
-    inline // display and return split time
+    inline // return split time
     auto split() noexcept -> _impl::_time<Unit::automatic, 0>;
+
+    _chz_impl_NODISCARD_REASON("total: not using the return value makes no sens")
+    inline // return total time
+    auto total() noexcept -> _impl::_time<Unit::automatic, 0>;
 
     inline // reset measured times
     void reset() noexcept;
@@ -375,17 +375,17 @@ namespace chz
     inline // pause time measurement
     void pause() noexcept;
 
-    inline // unpause time measurement
+    inline // resume time measurement
     void unpause() noexcept;
 
     inline // RAII-style scoped pause/unpause
     auto guard() noexcept -> _guard;
     
   private:
-    bool                      _is_paused    = false;
-    std::chrono::nanoseconds  _duration_tot = {};
-    std::chrono::nanoseconds  _duration_lap = {};
-    _impl::_clock::time_point _previous     = _impl::_clock::now();
+    bool                      _is_paused      = false;
+    std::chrono::nanoseconds  _duration_total = {};
+    std::chrono::nanoseconds  _duration_split = {};
+    _impl::_clock::time_point _previous       = _impl::_clock::now();
   };
 //----------------------------------------------------------------------------------------------------------------------
   class Measure
@@ -407,17 +407,17 @@ namespace chz
     inline // pause measurement
     void pause() noexcept;
 
-    inline // unpause measurement
+    inline // resume measurement
     void unpause() noexcept;
 
     inline // scoped pause/unpause of measurement
     auto guard() noexcept -> decltype(Stopwatch().guard());
 
   private:
-    const unsigned _iterations  = 1;
-    unsigned       _iters_left  = _iterations;
-    const char*    _iter_format = nullptr;
-    const char*    _tot_format  = "total elapsed time: %ms";
+    const unsigned _iterations   = 1;
+    unsigned       _iters_left   = _iterations;
+    const char*    _format_split = nullptr;
+    const char*    _format_total = "total elapsed time: %ms";
     Stopwatch      _stopwatch;
     class _iter;
   public:
@@ -486,7 +486,7 @@ namespace chz
     inline // pause measurements
     void pause() noexcept;
 
-    inline // unpause measurement
+    inline // resume measurement
     void unpause() noexcept;
 
     inline // scoped pause/unpause of measurement
@@ -533,48 +533,48 @@ namespace chz
     }
   };
 //----------------------------------------------------------------------------------------------------------------------
-  auto Stopwatch::lap() noexcept -> _impl::_time<Unit::automatic, 0>
-  {
-    const auto now = _impl::_clock::now();
-
-    auto lap_duration = _duration_lap;
-    _duration_lap     = {};
-
-    if _chz_impl_EXPECTED(!_is_paused)
-    {
-      _duration_tot += now - _previous;
-      lap_duration  += now - _previous;
-
-      _previous = _impl::_clock::now(); // start measurement from here
-    }
-
-    return _impl::_time<Unit::automatic, 0>{lap_duration};
-  }
-  
   auto Stopwatch::split() noexcept -> _impl::_time<Unit::automatic, 0>
   {
     const auto now = _impl::_clock::now();
 
-    auto tot_duration = _duration_tot;
+    auto split_duration = _duration_split;
+    _duration_split     = {};
 
     if _chz_impl_EXPECTED(!_is_paused)
     {
-      tot_duration += now - _previous;
+      _duration_total += now - _previous;
+      split_duration  += now - _previous;
 
-      _duration_lap = {};
-      _duration_tot = {};
+      _previous = _impl::_clock::now(); // start measurement from here
     }
 
-    return _impl::_time<Unit::automatic, 0>{tot_duration};
+    return _impl::_time<Unit::automatic, 0>{split_duration};
+  }
+  
+  auto Stopwatch::total() noexcept -> _impl::_time<Unit::automatic, 0>
+  {
+    const auto now = _impl::_clock::now();
+
+    auto total_duration = _duration_total;
+
+    if _chz_impl_EXPECTED(!_is_paused)
+    {
+      total_duration += now - _previous;
+
+      _duration_split = {};
+      _duration_total = {};
+    }
+
+    return _impl::_time<Unit::automatic, 0>{total_duration};
   }
 
   void Stopwatch::reset() noexcept
   {
-    _duration_tot = {};
-    _duration_lap = {};
+    _duration_total = {};
+    _duration_split = {};
 
     // hot reset if unpaused
-    if (not _is_paused)
+    if (!_is_paused)
     {
       _previous = _impl::_clock::now(); // start measurement from here
     }
@@ -588,8 +588,8 @@ namespace chz
     {
       _is_paused = true;
 
-      _duration_tot += now - _previous;
-      _duration_lap += now - _previous;
+      _duration_total += now - _previous;
+      _duration_split += now - _previous;
     }
   }
 
@@ -637,21 +637,21 @@ namespace chz
 //----------------------------------------------------------------------------------------------------------------------
   Measure::Measure(const unsigned iterations_) noexcept :
     _iterations(iterations_),
-    _tot_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _format_total((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(const unsigned iterations_, const char* const iteration_format_) noexcept :
     _iterations(iterations_),
-    _iter_format((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
-    _tot_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _format_split((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
+    _format_total((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(
     const unsigned iterations_, const char* const iteration_format_, const char* const total_format_
   ) noexcept :
     _iterations(iterations_),
-    _iter_format((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
-    _tot_format((total_format_[0] == '\0') ? nullptr : total_format_)
+    _format_split((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
+    _format_total((total_format_[0] == '\0') ? nullptr : total_format_)
   {}
 
   void Measure::pause() noexcept
@@ -671,34 +671,33 @@ namespace chz
 
   void Measure::next() noexcept
   {
-    _stopwatch.pause();
-    const auto iter_duration = _stopwatch.lap();
+    const auto guard = _stopwatch.guard();
+    const auto split = _stopwatch.split();
 
-    if (_iter_format)
+    if (_format_split)
     {
       _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_format_lap(iter_duration, _iter_format, _iterations - _iters_left) << std::endl;
+      _io::out << _impl::_format_lap(split, _format_split, _iterations - _iters_left) << std::endl;
     }
 
     --_iters_left;
-    _stopwatch.unpause();
   }
   
   bool Measure::good() noexcept
   {
-    _stopwatch.pause();
-    if _chz_impl_EXPECTED(_iters_left)
+    const auto guard = _stopwatch.guard();
+
+    if _chz_impl_EXPECTED(_iters_left != 0)
     {
-      _stopwatch.unpause();
       return true;
     }
 
-    const auto duration = _stopwatch.split();
+    const auto duration = _stopwatch.total();
 
-    if _chz_impl_EXPECTED(_tot_format)
+    if _chz_impl_EXPECTED(_format_total)
     {
       _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_format_tot(duration, _tot_format, _iterations) << std::endl;
+      _io::out << _impl::_format_tot(duration, _format_total, _iterations) << std::endl;
     }
 
     return false;

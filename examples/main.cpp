@@ -12,16 +12,16 @@ int main()
   chz::sleep(70);
 
   // these print operations are guarded to avoid measuring them
-  stopwatch.guard(), std::cout << stopwatch.lap().format<3, chz::Unit::us>(); // prints ~"elapsed time: 100000.000 us"
+  stopwatch.guard(), std::cout << stopwatch.split().format<3, chz::Unit::us>(); // prints ~"elapsed time: 100000.000 us"
   chz::sleep(80);
-  stopwatch.guard(), std::cout << stopwatch.lap();   // prints ~"elapsed time: 80 ms"
-  stopwatch.guard(), std::cout << stopwatch.split(); // prints ~"elapsed time: 180 ms"
+  stopwatch.guard(), std::cout << stopwatch.split();   // prints ~"elapsed time: 80 ms"
+  stopwatch.guard(), std::cout << stopwatch.total(); // prints ~"elapsed time: 180 ms"
   stopwatch.reset();
   chz::sleep(250);
 
-  std::cout << stopwatch.split().format<chz::Unit::us>(); // prints ~"elapsed time: 250000 ns"
+  std::cout << stopwatch.total().format<chz::Unit::us>(); // prints ~"elapsed time: 250000 ns"
   stopwatch.pause();
-  std::cout << stopwatch.split().format<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
+  std::cout << stopwatch.total().format<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
 
   std::cout << '\n';
   CHZ_MEASURE()
