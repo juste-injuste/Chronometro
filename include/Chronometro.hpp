@@ -45,7 +45,7 @@ execution time of code blocks and more. See the included README.MD file for more
 #include <chrono>   // for std::chrono::steady_clock, std::chrono::high_resolution_clock, std::chrono::nanoseconds
 #include <ostream>  // for std::ostream
 #include <iostream> // for std::cout, std::endl
-#include <string>   // for std::string
+#include <string>   // for std::string, std::to_string
 #include <utility>  // for std::move
 #include <cstdio>   // for std::sprintf
 //---conditionally necessary standard libraries-------------------------------------------------------------------------
@@ -200,12 +200,14 @@ namespace chz
       template<Unit unit_, unsigned n_decimals_ = n_decimals>
       auto format() const noexcept -> const _time<unit_, n_decimals_>&
       {
+        static_assert(n_decimals <= 3, "format: too many decimals requested.");
         return reinterpret_cast<const _time<unit_, n_decimals_>&>(*this);
       }
 
       template<unsigned n_decimals_, Unit unit_ = unit>
       auto format() const noexcept -> const _time<unit_, n_decimals_>&
       {
+        static_assert(n_decimals <= 3, "format: too many decimals requested.");
         return reinterpret_cast<const _time<unit_, n_decimals_>&>(*this);
       }
     };
@@ -229,14 +231,11 @@ namespace chz
     _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::s,   "s",   1000000000);
     _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::min, "min", 60000000000);
     _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION(Unit::h,   "h",   3600000000000);
-
 #   undef _chz_impl_MAKE_UNIT_HELPER_SPECIALIZATION
 
     template<Unit unit, unsigned n_decimals>
     auto _time_as_cstring(const _time<unit, n_decimals> time_) noexcept -> const char*
     {
-      static_assert(n_decimals <= 3, "_impl::_time_as_string: too many decimals requested");
-
       static _chz_impl_THREADLOCAL char buffer[32];
 
       const auto ajusted_time = static_cast<double>(time_.nanoseconds.count())/_unit_helper<unit>::factor;
@@ -297,15 +296,15 @@ namespace chz
     template<Unit unit, unsigned n_decimals>
     auto _format_time(const _time<unit, n_decimals> time_, std::string&& fmt_) noexcept -> std::string
     {
-      static const std::string unit_specifiers[] = {"%ns", "%us", "%ms", "%s", "%min", "%h"};
+      constexpr const char* specifiers[] = {"%ms", "%us", "%s", "%ns", "%min", "%h"};
 
-      for (const auto& unit_specifier : unit_specifiers)
+      for (const std::string specifier : specifiers)
       {
-        auto position = fmt_.rfind(unit_specifier);
+        auto position = fmt_.rfind(specifier);
         while (position != std::string::npos)
         {
-          fmt_.replace(position, unit_specifier.length(), _time_as_cstring(time_));
-          position = fmt_.find(unit_specifier);
+          fmt_.replace(position, specifier.length(), _time_as_cstring(time_));
+          position = fmt_.find(specifier);
         }
       }
 
@@ -541,7 +540,7 @@ namespace chz
     auto lap_duration = _duration_lap;
     _duration_lap     = {};
 
-    if _chz_impl_EXPECTED(not _is_paused)
+    if _chz_impl_EXPECTED(!_is_paused)
     {
       _duration_tot += now - _previous;
       lap_duration  += now - _previous;
@@ -558,7 +557,7 @@ namespace chz
 
     auto tot_duration = _duration_tot;
 
-    if _chz_impl_EXPECTED(not _is_paused)
+    if _chz_impl_EXPECTED(!_is_paused)
     {
       tot_duration += now - _previous;
 
@@ -585,7 +584,7 @@ namespace chz
   {
     const auto now = _impl::_clock::now();
 
-    if _chz_impl_EXPECTED(not _is_paused)
+    if _chz_impl_EXPECTED(!_is_paused)
     {
       _is_paused = true;
 
