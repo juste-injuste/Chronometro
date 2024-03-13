@@ -416,7 +416,7 @@ namespace chz
 
   private:
     const unsigned _iterations   = 1;
-    unsigned       _iters_left   = _iterations;
+    unsigned       _remaining    = _iterations;
     const char*    _format_split = nullptr;
     const char*    _format_total = "total elapsed time: %ms";
     Stopwatch      _stopwatch;
@@ -546,7 +546,7 @@ namespace chz
       _duration_total += now - _previous;
       split_duration  += now - _previous;
 
-      _previous = _impl::_clock::now(); // start measurement from here
+      _previous = _impl::_clock::now();
     }
 
     return _impl::_time<Unit::automatic, 0>{split_duration};
@@ -576,7 +576,7 @@ namespace chz
 
     if (_paused) return;
     
-    _previous = _impl::_clock::now(); // start measurement from here
+    _previous = _impl::_clock::now();
   }
 
   void Stopwatch::pause() noexcept
@@ -597,7 +597,7 @@ namespace chz
     {
       _paused = false;
 
-      _previous = _impl::_clock::now(); // start measurement from here
+      _previous = _impl::_clock::now();
     }
   }
 
@@ -669,7 +669,7 @@ namespace chz
 
   auto Measure::begin() noexcept -> _iter
   {
-    _iters_left = _iterations;
+    _remaining = _iterations;
 
     _stopwatch.start();
     _stopwatch.reset();
@@ -684,14 +684,14 @@ namespace chz
 
   auto Measure::view() noexcept -> View
   {
-    return View(_iterations - _iters_left, this);
+    return View(_iterations - _remaining, this);
   }
   
   bool Measure::good() noexcept
   {
     const auto avoid = _stopwatch.avoid();
 
-    if _chz_impl_EXPECTED(_iters_left != 0)
+    if _chz_impl_EXPECTED(_remaining != 0)
     {
       return true;
     }
@@ -715,10 +715,10 @@ namespace chz
     if (_format_split)
     {
       _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_format_lap(split, _format_split, _iterations - _iters_left) << std::endl;
+      _io::out << _impl::_format_lap(split, _format_split, _iterations - _remaining) << std::endl;
     }
 
-    --_iters_left;
+    --_remaining;
   }
 //----------------------------------------------------------------------------------------------------------------------
   Measure::View::View(const unsigned current_iteration_, Measure* const measurement_) noexcept :
