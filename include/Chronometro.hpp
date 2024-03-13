@@ -662,23 +662,29 @@ namespace chz
     _stopwatch.start();
   }
 
+  auto Measure::avoid() noexcept -> decltype(Stopwatch().avoid())
+  {
+    return _stopwatch.avoid();
+  }
+
+  auto Measure::begin() noexcept -> _iter
+  {
+    _iters_left = _iterations;
+
+    _stopwatch.start();
+    _stopwatch.reset();
+
+    return _iter(this);
+  }
+
+  auto Measure::end() const noexcept -> _iter
+  {
+    return _iter();
+  }
+
   auto Measure::view() noexcept -> View
   {
     return View(_iterations - _iters_left, this);
-  }
-
-  void Measure::next() noexcept
-  {
-    const auto avoid = _stopwatch.avoid();
-    const auto split = _stopwatch.split();
-
-    if (_format_split)
-    {
-      _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_format_lap(split, _format_split, _iterations - _iters_left) << std::endl;
-    }
-
-    --_iters_left;
   }
   
   bool Measure::good() noexcept
@@ -701,24 +707,18 @@ namespace chz
     return false;
   }
 
-  auto Measure::avoid() noexcept -> decltype(Stopwatch().avoid())
+  void Measure::next() noexcept
   {
-    return _stopwatch.avoid();
-  }
+    const auto avoid = _stopwatch.avoid();
+    const auto split = _stopwatch.split();
 
-  auto Measure::begin() noexcept -> _iter
-  {
-    _iters_left = _iterations;
+    if (_format_split)
+    {
+      _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
+      _io::out << _impl::_format_lap(split, _format_split, _iterations - _iters_left) << std::endl;
+    }
 
-    _stopwatch.start();
-    _stopwatch.reset();
-
-    return _iter(this);
-  }
-
-  auto Measure::end() const noexcept -> _iter
-  {
-    return _iter();
+    --_iters_left;
   }
 //----------------------------------------------------------------------------------------------------------------------
   Measure::View::View(const unsigned current_iteration_, Measure* const measurement_) noexcept :
