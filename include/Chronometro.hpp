@@ -691,7 +691,7 @@ namespace chz
   {
     const auto avoid = _stopwatch.avoid();
 
-    if _chz_impl_EXPECTED(_remaining != 0)
+    if _chz_impl_EXPECTED(_remaining)
     {
       return true;
     }
