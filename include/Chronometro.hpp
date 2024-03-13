@@ -449,7 +449,7 @@ namespace chz
     if ([]{                                                                                \
       static_assert(MS > 0, "CHZ_ONLY_EVERY: 'MS' must be a non-zero positive number.");   \
       constexpr auto _chz_impl_diff##line = std::chrono::nanoseconds{(MS)*1000000};        \
-      static auto _chz_impl_goal##line = chz::_impl::_clock::now() + _chz_impl_diff##line; \
+      static chz::_impl::_clock::time_point _chz_impl_goal##line = {};                       \
       if (chz::_impl::_clock::now() > _chz_impl_goal##line)                                \
       {                                                                                    \
         _chz_impl_goal##line = chz::_impl::_clock::now() + _chz_impl_diff##line;           \
