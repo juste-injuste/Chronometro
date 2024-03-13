@@ -383,7 +383,7 @@ namespace chz
     auto avoid() noexcept -> _guard;
     
   private:
-    bool                      _is_paused      = false;
+    bool                      _paused         = false;
     std::chrono::nanoseconds  _duration_total = {};
     std::chrono::nanoseconds  _duration_split = {};
     _impl::_clock::time_point _previous       = _impl::_clock::now();
@@ -541,7 +541,7 @@ namespace chz
     auto split_duration = _duration_split;
     _duration_split     = {};
 
-    if _chz_impl_EXPECTED(!_is_paused)
+    if _chz_impl_EXPECTED(!_paused)
     {
       _duration_total += now - _previous;
       split_duration  += now - _previous;
@@ -558,7 +558,7 @@ namespace chz
 
     auto total_duration = _duration_total;
 
-    if _chz_impl_EXPECTED(!_is_paused)
+    if _chz_impl_EXPECTED(!_paused)
     {
       total_duration += now - _previous;
 
@@ -574,31 +574,28 @@ namespace chz
     _duration_total = {};
     _duration_split = {};
 
-    // hot reset if startd
-    if (!_is_paused)
-    {
-      _previous = _impl::_clock::now(); // start measurement from here
-    }
+    if (_paused) return;
+    
+    _previous = _impl::_clock::now(); // start measurement from here
   }
 
   void Stopwatch::pause() noexcept
   {
     const auto now = _impl::_clock::now();
 
-    if _chz_impl_EXPECTED(!_is_paused)
-    {
-      _is_paused = true;
+    if _chz_impl_ABNORMAL(_paused) return;
 
-      _duration_total += now - _previous;
-      _duration_split += now - _previous;
-    }
+    _paused = true;
+
+    _duration_total += now - _previous;
+    _duration_split += now - _previous;
   }
 
   void Stopwatch::start() noexcept
   {
-    if _chz_impl_EXPECTED(_is_paused)
+    if _chz_impl_EXPECTED(_paused)
     {
-      _is_paused = false;
+      _paused = false;
 
       _previous = _impl::_clock::now(); // start measurement from here
     }
