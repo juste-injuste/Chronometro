@@ -362,11 +362,11 @@ namespace chz
   {
     class _guard;
   public:    
-    _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens")
+    _chz_impl_NODISCARD_REASON("split: not using the return value makes no sens.")
     inline // return split time
     auto split() noexcept -> _impl::_time<Unit::automatic, 0>;
 
-    _chz_impl_NODISCARD_REASON("total: not using the return value makes no sens")
+    _chz_impl_NODISCARD_REASON("total: not using the return value makes no sens.")
     inline // return total time
     auto total() noexcept -> _impl::_time<Unit::automatic, 0>;
 
@@ -426,8 +426,8 @@ namespace chz
     inline _iter end() const noexcept;
   private:
     inline View view() noexcept;
-    inline void next() noexcept;
     inline bool good() noexcept;
+    inline void next() noexcept;
     friend _impl::_backdoor;
   };
 //----------------------------------------------------------------------------------------------------------------------
@@ -600,7 +600,7 @@ namespace chz
     {
       _is_paused = false;
 
-      _previous  = _impl::_clock::now(); // start measurement from here
+      _previous = _impl::_clock::now(); // start measurement from here
     }
   }
 
