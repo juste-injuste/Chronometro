@@ -200,14 +200,14 @@ namespace chz
       template<Unit unit_, unsigned n_decimals_ = n_decimals>
       auto style() const noexcept -> const _time<unit_, n_decimals_>&
       {
-        static_assert(n_decimals <= 3, "style: too many decimals requested.");
+        static_assert(n_decimals <= 4, "style: too many decimals requested.");
         return reinterpret_cast<const _time<unit_, n_decimals_>&>(*this);
       }
 
       template<unsigned n_decimals_, Unit unit_ = unit>
       auto style() const noexcept -> const _time<unit_, n_decimals_>&
       {
-        static_assert(n_decimals <= 3, "style: too many decimals requested.");
+        static_assert(n_decimals <= 4, "style: too many decimals requested.");
         return reinterpret_cast<const _time<unit_, n_decimals_>&>(*this);
       }
     };
@@ -244,7 +244,8 @@ namespace chz
         n_decimals == 0 ? "%.0f %s"
       : n_decimals == 1 ? "%.1f %s"
       : n_decimals == 2 ? "%.2f %s"
-      :                   "%.3f %s",
+      : n_decimals == 3 ? "%.3f %s"
+      :                   "%.4f %s",
       ajusted_time, _unit_helper<unit>::label);
 
       return buffer;
