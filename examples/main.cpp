@@ -62,10 +62,9 @@ int main()
   }
 
   std::cout << '\n';
-  for (auto measurement : chz::Measure(4, "iteration %# took %ms", "iterations took %ms"))
+  for (auto iteration : chz::Measure(4, "iteration %# took %ms", "iterations took %ms"))
   {
-    measurement.avoid(), std::cout << "currently doing iteration #" << measurement.iteration << '\n';
-
+    iteration.avoid(), std::cout << "currently doing iteration #" << iteration.value << '\n'; // not measured
     chz::sleep(100);
   }
 
@@ -81,26 +80,26 @@ int main()
   }
 
   std::cout << '\n';
-  for (auto measurement : chz::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
+  for (auto iteration : chz::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
   {
     chz::sleep(7); // measured
 
-    measurement.avoid(), chz::sleep(50); // not measured
+    iteration.avoid(), chz::sleep(50); // not measured
 
     chz::sleep(1); // measured
 
     {
-      auto guard = measurement.avoid();
+      auto guard = iteration.avoid();
       chz::sleep(10); // not measured
       chz::sleep(5);  // not measured
     }
 
     chz::sleep(1); // measured
 
-    measurement.pause();
+    iteration.pause();
     chz::sleep(100); // not measured
 
-    measurement.start();
+    iteration.start();
     chz::sleep(2); // measured
   }
 }

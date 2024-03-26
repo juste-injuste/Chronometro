@@ -313,7 +313,7 @@ namespace chz
     }
 
     template<Unit unit, unsigned n_decimals>
-    auto _format_lap(const _time<unit, n_decimals> time_, std::string&& fmt_, const unsigned iter_) noexcept
+    auto _split_format(const _time<unit, n_decimals> time_, std::string&& fmt_, const unsigned iter_) noexcept
       -> std::string
     {
       auto position = fmt_.find("%#");
@@ -327,7 +327,7 @@ namespace chz
     }
 
     template<Unit unit, unsigned n_decimals>
-    auto _format_tot(const _time<unit, n_decimals> time_, std::string&& fmt_, unsigned n_iters_) noexcept
+    auto _total_format(const _time<unit, n_decimals> time_, std::string&& fmt_, unsigned n_iters_) noexcept
       -> std::string
     {
       fmt_ = _format_time(time_, std::move(fmt_));
@@ -391,7 +391,7 @@ namespace chz
 //----------------------------------------------------------------------------------------------------------------------
   class Measure
   {
-    class View;
+    class Iteration;
   public:
     constexpr // measure one iteration
     Measure() noexcept = default;
@@ -415,17 +415,17 @@ namespace chz
     auto avoid() noexcept -> decltype(Stopwatch().avoid());
 
   private:
-    const unsigned _iterations   = 1;
-    unsigned       _remaining    = _iterations;
-    const char*    _format_split = nullptr;
-    const char*    _format_total = "total elapsed time: %ms";
-    Stopwatch      _stopwatch;
-    class _iter;
+    const unsigned    _iterations   = 1;
+    unsigned          _remaining    = _iterations;
+    const char* const _split_format = nullptr;
+    const char* const _total_format = "total elapsed time: %ms";
+    Stopwatch         _stopwatch;
+    class _iterator;
   public:
-    inline _iter begin()     noexcept;
-    inline _iter end() const noexcept;
+    inline auto begin()     noexcept -> _iterator;
+    inline auto end() const noexcept -> _iterator;
   private:
-    inline View view() noexcept;
+    inline auto view() noexcept -> Iteration;
     inline bool good() noexcept;
     inline void next() noexcept;
     friend _impl::_backdoor;
@@ -477,12 +477,12 @@ namespace chz
       return --_chz_impl_break_after##line;                                             \
     }()) {} else break
 //----------------------------------------------------------------------------------------------------------------------
-  class Measure::View final
+  class Measure::Iteration final
   {
     friend Measure;
   public:
     // current measurement iteration
-    const unsigned iteration;
+    const unsigned value;
 
     inline // pause measurements
     void pause() noexcept;
@@ -493,7 +493,7 @@ namespace chz
     inline // scoped pause/start of measurement
     auto avoid() noexcept -> decltype(Stopwatch().avoid());
   private:
-    inline View(unsigned current_iteration, Measure* measurement) noexcept;
+    inline Iteration(unsigned current_iteration, Measure* measurement) noexcept;
     Measure* const _measurement;
   };
 //----------------------------------------------------------------------------------------------------------------------
@@ -606,12 +606,12 @@ namespace chz
     return _guard(this);
   }
 //----------------------------------------------------------------------------------------------------------------------
-  class Measure::_iter final
+  class Measure::_iterator final
   {
   public:
-    constexpr _iter() noexcept = default;
+    constexpr _iterator() noexcept = default;
 
-    _iter(Measure* const measure_) noexcept :
+    _iterator(Measure* const measure_) noexcept :
       _measure(measure_)
     {}
 
@@ -620,12 +620,12 @@ namespace chz
       _measure->next();
     }
 
-    bool operator!=(const _iter&) const noexcept
+    bool operator!=(const _iterator&) const noexcept
     {
       return _measure->good();
     }
 
-    View operator*() const noexcept
+    Iteration operator*() const noexcept
     {
       return _measure->view();
     }
@@ -635,21 +635,21 @@ namespace chz
 //----------------------------------------------------------------------------------------------------------------------
   Measure::Measure(const unsigned iterations_) noexcept :
     _iterations(iterations_),
-    _format_total((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _total_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(const unsigned iterations_, const char* const iteration_format_) noexcept :
     _iterations(iterations_),
-    _format_split((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
-    _format_total((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _split_format(iteration_format_ && *iteration_format_ ? iteration_format_ : nullptr),
+    _total_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(
     const unsigned iterations_, const char* const iteration_format_, const char* const total_format_
   ) noexcept :
     _iterations(iterations_),
-    _format_split((iteration_format_[0] == '\0') ? nullptr : iteration_format_),
-    _format_total((total_format_[0] == '\0') ? nullptr : total_format_)
+    _split_format(iteration_format_ && *iteration_format_ ? iteration_format_ : nullptr),
+    _total_format(total_format_     && *total_format_     ? total_format_     : nullptr)
   {}
 
   void Measure::pause() noexcept
@@ -667,24 +667,24 @@ namespace chz
     return _stopwatch.avoid();
   }
 
-  auto Measure::begin() noexcept -> _iter
+  auto Measure::begin() noexcept -> _iterator
   {
     _remaining = _iterations;
 
     _stopwatch.start();
     _stopwatch.reset();
 
-    return _iter(this);
+    return _iterator(this);
   }
 
-  auto Measure::end() const noexcept -> _iter
+  auto Measure::end() const noexcept -> _iterator
   {
-    return _iter();
+    return _iterator();
   }
 
-  auto Measure::view() noexcept -> View
+  auto Measure::view() noexcept -> Iteration
   {
-    return View(_iterations - _remaining, this);
+    return Iteration(_iterations - _remaining, this);
   }
   
   bool Measure::good() noexcept
@@ -698,10 +698,10 @@ namespace chz
 
     const auto duration = _stopwatch.total();
 
-    if _chz_impl_EXPECTED(_format_total)
+    if _chz_impl_EXPECTED(_total_format)
     {
       _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_format_tot(duration, _format_total, _iterations) << std::endl;
+      _io::out << _impl::_total_format(duration, _total_format, _iterations) << std::endl;
     }
 
     return false;
@@ -712,31 +712,31 @@ namespace chz
     const auto avoid = _stopwatch.avoid();
     const auto split = _stopwatch.split();
 
-    if (_format_split)
+    if (_split_format)
     {
       _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_format_lap(split, _format_split, _iterations - _remaining) << std::endl;
+      _io::out << _impl::_split_format(split, _split_format, _iterations - _remaining) << std::endl;
     }
 
     --_remaining;
   }
 //----------------------------------------------------------------------------------------------------------------------
-  Measure::View::View(const unsigned current_iteration_, Measure* const measurement_) noexcept :
-    iteration(current_iteration_),
+  Measure::Iteration::Iteration(const unsigned current_iteration_, Measure* const measurement_) noexcept :
+    value(current_iteration_),
     _measurement(measurement_)
   {}
 
-  void Measure::View::pause() noexcept
+  void Measure::Iteration::pause() noexcept
   {
     _measurement->pause();
   }
 
-  void Measure::View::start() noexcept
+  void Measure::Iteration::start() noexcept
   {
     _measurement->start();
   }
 
-  auto Measure::View::avoid() noexcept -> decltype(Stopwatch().avoid())
+  auto Measure::Iteration::avoid() noexcept -> decltype(Stopwatch().avoid())
   {
     return _measurement->avoid();
   }
