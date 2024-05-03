@@ -313,7 +313,7 @@ namespace chz
     }
 
     template<Unit unit, unsigned n_decimals>
-    auto _split_format(const _time<unit, n_decimals> time_, std::string&& fmt_, const unsigned iter_) noexcept
+    auto _split_fmt(const _time<unit, n_decimals> time_, std::string&& fmt_, const unsigned iter_) noexcept
       -> std::string
     {
       auto position = fmt_.find("%#");
@@ -327,7 +327,7 @@ namespace chz
     }
 
     template<Unit unit, unsigned n_decimals>
-    auto _total_format(const _time<unit, n_decimals> time_, std::string&& fmt_, unsigned n_iters_) noexcept
+    auto _total_fmt(const _time<unit, n_decimals> time_, std::string&& fmt_, unsigned n_iters_) noexcept
       -> std::string
     {
       fmt_ = _format_time(time_, std::move(fmt_));
@@ -415,10 +415,10 @@ namespace chz
     auto avoid() noexcept -> decltype(Stopwatch().avoid());
 
   private:
-    const unsigned    _iterations   = 1;
-    unsigned          _remaining    = _iterations;
-    const char* const _split_format = nullptr;
-    const char* const _total_format = "total elapsed time: %ms";
+    const unsigned    _iterations = 1;
+    unsigned          _remaining  = _iterations;
+    const char* const _split_fmt  = nullptr;
+    const char* const _total_fmt  = "total elapsed time: %ms";
     Stopwatch         _stopwatch;
     class _iterator;
   public:
@@ -635,21 +635,21 @@ namespace chz
 //----------------------------------------------------------------------------------------------------------------------
   Measure::Measure(const unsigned iterations_) noexcept :
     _iterations(iterations_),
-    _total_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _total_fmt((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(const unsigned iterations_, const char* const iteration_format_) noexcept :
     _iterations(iterations_),
-    _split_format(iteration_format_ && *iteration_format_ ? iteration_format_ : nullptr),
-    _total_format((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
+    _split_fmt(iteration_format_ && *iteration_format_ ? iteration_format_ : nullptr),
+    _total_fmt((_iterations > 1) ? "total elapsed time: %ms [avg = %Dus]" : "total elapsed time: %ms")
   {}
 
   Measure::Measure(
     const unsigned iterations_, const char* const iteration_format_, const char* const total_format_
   ) noexcept :
     _iterations(iterations_),
-    _split_format(iteration_format_ && *iteration_format_ ? iteration_format_ : nullptr),
-    _total_format(total_format_     && *total_format_     ? total_format_     : nullptr)
+    _split_fmt(iteration_format_ && *iteration_format_ ? iteration_format_ : nullptr),
+    _total_fmt(total_format_     && *total_format_     ? total_format_     : nullptr)
   {}
 
   void Measure::pause() noexcept
@@ -698,10 +698,10 @@ namespace chz
 
     const auto duration = _stopwatch.total();
 
-    if _chz_impl_EXPECTED(_total_format)
+    if _chz_impl_EXPECTED(_total_fmt)
     {
       _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_total_format(duration, _total_format, _iterations) << std::endl;
+      _io::out << _impl::_total_fmt(duration, _total_fmt, _iterations) << std::endl;
     }
 
     return false;
@@ -712,10 +712,10 @@ namespace chz
     const auto avoid = _stopwatch.avoid();
     const auto split = _stopwatch.split();
 
-    if (_split_format)
+    if (_split_fmt)
     {
       _chz_impl_DECLARE_LOCK(_impl::_out_mtx);
-      _io::out << _impl::_split_format(split, _split_format, _iterations - _remaining) << std::endl;
+      _io::out << _impl::_split_fmt(split, _split_fmt, _iterations - _remaining) << std::endl;
     }
 
     --_remaining;
