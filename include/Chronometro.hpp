@@ -351,12 +351,12 @@ namespace chz
   }
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHZ_MEASURE
-# define CHZ_MEASURE(...)                         _chz_impl_MEASURE_PROX(__LINE__,    __VA_ARGS__)
-# define _chz_impl_MEASURE_PROX(line_number, ...) _chz_impl_MEASURE_IMPL(line_number, __VA_ARGS__)
-# define _chz_impl_MEASURE_IMPL(line_number, ...)                  \
-    for (chz::Measure _chz_impl_measure##line_number{__VA_ARGS__}; \
-      chz::_impl::_backdoor::good(_chz_impl_measure##line_number); \
-      chz::_impl::_backdoor::next(_chz_impl_measure##line_number))
+# define CHZ_MEASURE(...)                  _chz_impl_MEASURE_PRXY(__LINE__, __VA_ARGS__)
+# define _chz_impl_MEASURE_PRXY(LINE, ...) _chz_impl_MEASURE_IMPL(LINE,     __VA_ARGS__)
+# define _chz_impl_MEASURE_IMPL(LINE, ...)                  \
+    for (chz::Measure _chz_impl_MEASURE##LINE{__VA_ARGS__}; \
+      chz::_impl::_backdoor::good(_chz_impl_MEASURE##LINE); \
+      chz::_impl::_backdoor::next(_chz_impl_MEASURE##LINE))
 //----------------------------------------------------------------------------------------------------------------------
   class Stopwatch
   {
@@ -405,6 +405,12 @@ namespace chz
     inline // measure iterations with custom iteration/total message
     Measure(unsigned iterations, const char* iteration_format, const char* total_format) noexcept;
 
+    inline // measure one iteration with custom total message
+    Measure(const char* total_format) noexcept;
+
+    inline // measure iterations with custom total message
+    Measure(const char* total_format, unsigned iterations) noexcept;
+
     inline // pause measurement
     void pause() noexcept;
 
@@ -443,32 +449,32 @@ namespace chz
   void sleep<Unit::automatic>(unsigned long long) noexcept = delete;
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHZ_ONLY_EVERY
-# define CHZ_ONLY_EVERY(MS)                  _chz_impl_ONLY_EVERY_PROX(__LINE__, MS)
-# define _chz_impl_ONLY_EVERY_PROX(line, MS) _chz_impl_ONLY_EVERY_IMPL(line,     MS)
-# define _chz_impl_ONLY_EVERY_IMPL(line, MS)                                               \
-    if ([]{                                                                                \
-      static_assert(MS > 0, "CHZ_ONLY_EVERY: 'MS' must be a non-zero positive number.");   \
-      constexpr auto _chz_impl_diff##line = std::chrono::nanoseconds{(MS)*1000000};        \
-      static chz::_impl::_clock::time_point _chz_impl_goal##line = {};                       \
-      if (chz::_impl::_clock::now() > _chz_impl_goal##line)                                \
-      {                                                                                    \
-        _chz_impl_goal##line = chz::_impl::_clock::now() + _chz_impl_diff##line;           \
-        return false;                                                                      \
-      }                                                                                    \
-      return true;                                                                         \
+# define CHZ_ONLY_EVERY(MS)                  _chz_impl_ONLY_EVERY_PRXY(__LINE__, MS)
+# define _chz_impl_ONLY_EVERY_PRXY(line, MS) _chz_impl_ONLY_EVERY_IMPL(line,     MS)
+# define _chz_impl_ONLY_EVERY_IMPL(line, MS)                                             \
+    if ([]{                                                                              \
+      static_assert(MS > 0, "CHZ_ONLY_EVERY: 'MS' must be a non-zero positive number."); \
+      constexpr auto _chz_impl_diff##line = std::chrono::nanoseconds{(MS)*1000000};      \
+      static chz::_impl::_clock::time_point _chz_impl_goal##line = {};                   \
+      if (chz::_impl::_clock::now() > _chz_impl_goal##line)                              \
+      {                                                                                  \
+        _chz_impl_goal##line = chz::_impl::_clock::now() + _chz_impl_diff##line;         \
+        return false;                                                                    \
+      }                                                                                  \
+      return true;                                                                       \
     }()) {} else
 //----------------------------------------------------------------------------------------------------------------------
 # undef  CHZ_LOOP_FOR
-# define CHZ_LOOP_FOR(N)                  _chz_impl_LOOP_FOR_PROX(__LINE__, N)
-# define _chz_impl_LOOP_FOR_PROX(line, N) _chz_impl_LOOP_FOR_IMPL(line,     N)
+# define CHZ_LOOP_FOR(N)                  _chz_impl_LOOP_FOR_PRXY(__LINE__, N)
+# define _chz_impl_LOOP_FOR_PRXY(line, N) _chz_impl_LOOP_FOR_IMPL(line,     N)
 # define _chz_impl_LOOP_FOR_IMPL(line, N)                                            \
     for (unsigned long long _chz_impl_loop_for##line = [&]{                          \
       static_assert(N > 0, "CHZ_LOOP_FOR: 'N' must be a non-zero positive number."); \
       return N; }(); _chz_impl_loop_for##line; --_chz_impl_loop_for##line)
 //----------------------------------------------------------------------------------------------------------------------  
 # undef  CHZ_BREAK_AFTER
-# define CHZ_BREAK_AFTER(N)                  _chz_impl_BREAK_AFTER_PROX(__LINE__, N)
-# define _chz_impl_BREAK_AFTER_PROX(line, N) _chz_impl_BREAK_AFTER_IMPL(line,     N)
+# define CHZ_BREAK_AFTER(N)                  _chz_impl_BREAK_AFTER_PRXY(__LINE__, N)
+# define _chz_impl_BREAK_AFTER_PRXY(line, N) _chz_impl_BREAK_AFTER_IMPL(line,     N)
 # define _chz_impl_BREAK_AFTER_IMPL(line, N)                                            \
     if ([]{                                                                             \
       static_assert(N > 0, "CHZ_BREAK_AFTER: 'N' must be a non-zero positive number."); \
@@ -650,6 +656,15 @@ namespace chz
     _iterations(iterations_),
     _split_fmt(iteration_format_ && *iteration_format_ ? iteration_format_ : nullptr),
     _total_fmt(total_format_     && *total_format_     ? total_format_     : nullptr)
+  {}
+
+  Measure::Measure(const char* const total_format_) noexcept :
+    _total_fmt(total_format_ && *total_format_ ? total_format_ : nullptr)
+  {}
+
+  Measure::Measure(const char* const total_format_, const unsigned iterations_) noexcept :
+    _iterations(iterations_),
+    _total_fmt(total_format_ && *total_format_ ? total_format_ : nullptr)
   {}
 
   void Measure::pause() noexcept
