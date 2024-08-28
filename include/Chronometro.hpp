@@ -97,6 +97,16 @@ inline namespace chz
   // break out of a loop when reached 'N' times
 # define STZ_BREAK_AFTER_N(N)
 
+  inline namespace _literals
+  {
+    constexpr auto operator""_mHz(long double        frequency) -> std::chrono::nanoseconds;
+    constexpr auto operator""_mHz(unsigned long long frequency) -> std::chrono::nanoseconds;
+    constexpr auto operator""_Hz (long double        frequency) -> std::chrono::nanoseconds;
+    constexpr auto operator""_Hz (unsigned long long frequency) -> std::chrono::nanoseconds;
+    constexpr auto operator""_kHz(long double        frequency) -> std::chrono::nanoseconds;
+    constexpr auto operator""_kHz(unsigned long long frequency) -> std::chrono::nanoseconds;
+  }
+
   namespace _io
   {
     static std::ostream out(std::cout.rdbuf()); // output
@@ -355,6 +365,20 @@ inline namespace chz
       return _format_time(_time<unit, 3>{time_.nanoseconds/n_iters_}, std::move(fmt_));
     }
 
+    template<typename R, typename P>
+    constexpr
+    bool _is_positive(const std::chrono::duration<R, P> duration_) noexcept
+    {
+      return duration_.count() > 0;
+    }
+
+    template<typename I>
+    constexpr
+    bool _is_positive(const I integer_) noexcept
+    {
+      return integer_ > 0;
+    }
+
     struct _backdoor;
   }
 //----------------------------------------------------------------------------------------------------------------------
@@ -473,18 +497,19 @@ inline namespace chz
 # undef STZ_ONLY_EVERY_MS
   // constexpr int only_every_ms() noexcept { return 0; }
 
-# define _stz_impl_ONLY_EVERY_MS_IMPL(LINE, MS)                                             \
-    /* only_every_ms(); */                                                                  \
-    if ([&]() -> bool {                                                                     \
-      static_assert(MS > 0, "STZ_ONLY_EVERY_MS: 'MS' must be a non-zero positive number."); \
-      constexpr auto _stz_impl_DIFF##LINE = std::chrono::nanoseconds(MS*1000000);           \
-      static stz::chz::_impl::_clock::time_point _stz_impl_GOAL##LINE = {};                 \
-      if (stz::chz::_impl::_clock::now() > _stz_impl_GOAL##LINE)                            \
-      {                                                                                     \
-        _stz_impl_GOAL##LINE = stz::chz::_impl::_clock::now() + _stz_impl_DIFF##LINE;       \
-        return false;                                                                       \
-      }                                                                                     \
-      return true;                                                                          \
+# define _stz_impl_ONLY_EVERY_MS_IMPL(LINE, MS)                                       \
+    /* only_every_ms(); */                                                            \
+    if ([&]() -> bool {                                                               \
+      static_assert(stz::chz::_impl::_is_positive(MS),                                \
+        "STZ_ONLY_EVERY_MS: 'MS' must be a non-zero positive number.");               \
+      constexpr auto _stz_impl_DIFF##LINE = std::chrono::nanoseconds(MS*1000000);     \
+      static stz::chz::_impl::_clock::time_point _stz_impl_GOAL##LINE = {};           \
+      if (stz::chz::_impl::_clock::now() > _stz_impl_GOAL##LINE)                      \
+      {                                                                               \
+        _stz_impl_GOAL##LINE = stz::chz::_impl::_clock::now() + _stz_impl_DIFF##LINE; \
+        return false;                                                                 \
+      }                                                                               \
+      return true;                                                                    \
     }()) {} else
 # define _stz_impl_ONLY_EVERY_MS_PRXY(LINE, MS) _stz_impl_ONLY_EVERY_MS_IMPL(LINE,     MS)
 # define STZ_ONLY_EVERY_MS(MS)                  _stz_impl_ONLY_EVERY_MS_PRXY(__LINE__, MS)
@@ -819,6 +844,48 @@ inline namespace chz
   auto Measure::Iteration::avoid() noexcept -> Stopwatch::Guard
   {
     return _measurement->avoid();
+  }
+
+  inline namespace _literals
+  {
+# if not defined(_stz_impl_LITERALS_FREQUENCY)
+#   define _stz_impl_LITERALS_FREQUENCY
+    constexpr
+    auto operator""_mHz(const long double frequency_) -> std::chrono::nanoseconds
+    {
+      return std::chrono::nanoseconds(static_cast<std::chrono::nanoseconds::rep>(1000000000000/frequency_));
+    }
+
+    constexpr
+    auto operator""_mHz(const unsigned long long frequency_) -> std::chrono::nanoseconds
+    {
+      return std::chrono::nanoseconds(static_cast<std::chrono::nanoseconds::rep>(1000000000000/frequency_));
+    }
+
+    constexpr
+    auto operator""_Hz(const long double frequency_) -> std::chrono::nanoseconds
+    {
+      return std::chrono::nanoseconds(static_cast<std::chrono::nanoseconds::rep>(1000000000/frequency_));
+    }
+
+    constexpr
+    auto operator""_Hz(const unsigned long long frequency_) -> std::chrono::nanoseconds
+    {
+      return std::chrono::nanoseconds(static_cast<std::chrono::nanoseconds::rep>(1000000000/frequency_));
+    }
+    
+    constexpr
+    auto operator""_kHz(const long double frequency_) -> std::chrono::nanoseconds
+    {
+      return std::chrono::nanoseconds(static_cast<std::chrono::nanoseconds::rep>(1000000/frequency_));
+    }
+
+    constexpr
+    auto operator""_kHz(const unsigned long long frequency_) -> std::chrono::nanoseconds
+    {
+      return std::chrono::nanoseconds(static_cast<std::chrono::nanoseconds::rep>(1000000/frequency_));
+    }
+# endif
   }
 }
 }
