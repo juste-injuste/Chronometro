@@ -2,7 +2,7 @@
 
 int test()
 {
-  chz::Stopwatch stopwatch;
+  stz::Stopwatch stopwatch;
 
   return 0;
 }
