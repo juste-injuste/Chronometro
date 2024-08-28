@@ -97,16 +97,6 @@ inline namespace chz
   // break out of a loop when reached 'N' times
 # define STZ_BREAK_AFTER_N(N)
 
-  inline namespace _literals
-  {
-    constexpr auto operator""_mHz(long double        frequency) -> std::chrono::nanoseconds;
-    constexpr auto operator""_mHz(unsigned long long frequency) -> std::chrono::nanoseconds;
-    constexpr auto operator""_Hz (long double        frequency) -> std::chrono::nanoseconds;
-    constexpr auto operator""_Hz (unsigned long long frequency) -> std::chrono::nanoseconds;
-    constexpr auto operator""_kHz(long double        frequency) -> std::chrono::nanoseconds;
-    constexpr auto operator""_kHz(unsigned long long frequency) -> std::chrono::nanoseconds;
-  }
-
   namespace _io
   {
     static std::ostream out(std::cout.rdbuf()); // output
@@ -845,7 +835,8 @@ inline namespace chz
   {
     return _measurement->avoid();
   }
-
+}
+//----------------------------------------------------------------------------------------------------------------------
   inline namespace _literals
   {
 # if not defined(_stz_impl_LITERALS_FREQUENCY)
@@ -887,7 +878,7 @@ inline namespace chz
     }
 # endif
   }
-}
+//----------------------------------------------------------------------------------------------------------------------
 }
 //----------------------------------------------------------------------------------------------------------------------
 # undef _stz_impl_PRAGMA
