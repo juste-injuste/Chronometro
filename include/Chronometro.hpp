@@ -102,10 +102,10 @@ inline namespace chronometro
     static std::ostream out(std::cout.rdbuf()); // output
   }
 
-#   define CHRONOMETRO_MAJOR    000
-#   define CHRONOMETRO_MINOR    000
-#   define CHRONOMETRO_PATCH    000
-#   define CHRONOMETRO_VERSION ((CHRONOMETRO_MAJOR  * 1000 + CHRONOMETRO_MINOR) * 1000 + CHRONOMETRO_PATCH)
+# define CHRONOMETRO_MAJOR    000
+# define CHRONOMETRO_MINOR    000
+# define CHRONOMETRO_PATCH    000
+# define CHRONOMETRO_VERSION ((CHRONOMETRO_MAJOR  * 1000 + CHRONOMETRO_MINOR) * 1000 + CHRONOMETRO_PATCH)
 //----------------------------------------------------------------------------------------------------------------------
   namespace _impl
   {
