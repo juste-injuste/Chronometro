@@ -1,6 +1,7 @@
 #define STZ_NOT_THREADSAFE
 #include "Chronometro.hpp"
 #include <iostream>
+#include <cstring>
 
 int main()
 {
@@ -16,50 +17,60 @@ int main()
   stz::sleep(80);
   stopwatch.avoid(), std::cout << stopwatch.split(); // prints ~"elapsed time: 80 ms"
   stopwatch.avoid(), std::cout << stopwatch.total(); // prints ~"elapsed time: 180 ms"
+
   stopwatch.reset();
   stz::sleep(250);
-
-  std::cout << stopwatch.total().style<stz::Unit::us>(); // prints ~"elapsed time: 250000 ns"
+  stopwatch.avoid(), std::cout << stopwatch.total().style<stz::Unit::us>(); // prints ~"elapsed time: 250000 us"
   stopwatch.pause();
   std::cout << stopwatch.total().style<2>(); // warning issued, prints ~"elapsed time: 250.00 ms"
 
   std::cout << '\n';
-  STZ_MEASURE_BLOCK()
-  std::cout << "once\n";
+  stz::measure_block()
+  {
+    std::cout << "once\n";
+  };
 
   std::cout << '\n';
-  STZ_MEASURE_BLOCK(2)
-  std::cout << "twice\n";
+  stz::measure_block(2)
+  {
+    std::cout << "twice\n";
+  };
 
   std::cout << '\n';
-  STZ_MEASURE_BLOCK(3, "iteration %# took %us")
-  std::cout << "thrice\n";
+  stz::measure_block(3, "iteration %# took %us")
+  {
+    std::cout << "thrice\n";
+  };
 
   std::cout << '\n';
-  STZ_MEASURE_BLOCK(4, "iteration %# took %us",  "took %us overall")
-  std::cout << "four times\n";
+  stz::measure_block(4, "iteration %# took %us",  "took %us overall")
+  {
+    std::cout << "four times\n";
+  };
 
   std::cout << '\n';
-  STZ_MEASURE_BLOCK(5, "",  "took %us overall")
-  std::cout << "five times\n";
+  stz::measure_block(5, "",  "took %us overall")
+  {
+    std::cout << "five times\n";
+  };
 
   std::cout << '\n';
-  STZ_MEASURE_BLOCK("should take ~800 ms, took %ms")
+  stz::measure_block("should take ~800 ms, took %ms")
   {
     unsigned inner_loops = 0, outer_loops = 0;
     while (inner_loops < 5)
     {
       ++outer_loops;
-      STZ_ONLY_EVERY_MS(200) // first execution does not wait 200 ms
+      stz::if_elapsed(200)
       {
         ++inner_loops;
         std::cout << "executing inner loop...\n"; // measured
-      }
+      };
     }
     
     std::cout << "inner loop executions: " << inner_loops << '\n'; // measured
     std::cout << "outer loop executions: " << outer_loops << '\n'; // measured
-  }
+  };
 
   std::cout << '\n';
   for (auto iteration : stz::Measure(4, "iteration %# took %ms", "iterations took %ms"))
@@ -69,15 +80,15 @@ int main()
   }
 
   std::cout << '\n';
-  STZ_MEASURE_BLOCK("average iteration took %Dms", 100)
+  stz::measure_block("average iteration took %Dms", 100)
   {
     stz::sleep(1);
-  }
+  };
 
-  STZ_LOOP_FOR_N(10)
+  stz::loop_n_times(10)
   {
-    STZ_BREAK_AFTER_N(5);
-  }
+    stz::break_after_n(5);
+  };
 
   std::cout << '\n';
   for (auto iteration : stz::Measure(10, "iteration %# took %ms", "average iteration took %Dms, total took %ms"))
