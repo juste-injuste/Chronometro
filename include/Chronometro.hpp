@@ -57,7 +57,7 @@ inline namespace chronometro
 //*///------------------------------------------------------------------------------------------------------------------
 {
   // measures the time it takes to execute statements
-# define measure_block(...) // followed by '{ statements... };'
+# define measure_block(...) // must be followed by '{ statements... };'
 
   // measure elapsed time
   class Stopwatch;
@@ -87,29 +87,28 @@ inline namespace chronometro
   void sleep(std::chrono::duration<R, P> duration) noexcept;
 
   // execute statements if last execution was atleast 'DURATION' prior
-# define if_elapsed(DURATION) // followed by '{ statements... };'
+# define if_elapsed(DURATION) // must be followed by '{ statements... };'
 
   // execute statements 'N' times
-# define loop_n_times(N) // followed by '{ statements... };'
+# define loop_n_times(N) // must be followed by '{ statements... };'
 
   // execute statements every 'N' encounters
-# define if_n_pass(N) // followed by '{ statements... };'
+# define if_n_pass(N) // must be followed by '{ statements... };'
 
   // break out of stz looping mechanisms
 # define break_now
 
   // break out of a stz looping mechanism if encountered 'N' times
-# define break_after_n(N) // followed by '{ statements... };'
+# define break_after_n(N)
 
-  namespace io
+  struct io
   {
-    static std::ostream out(std::cout.rdbuf()); // output
-    static std::ostream log(std::clog.rdbuf()); // logging
-    static std::ostream dbg(std::clog.rdbuf()); // debugging
-    static std::ostream wrn(std::cerr.rdbuf()); // warnings
-    static std::ostream err(std::cerr.rdbuf()); // errors
-  }
-
+    static std::ostream& out(); // output
+    static std::ostream& dbg(); // debugging
+    static std::ostream& wrn(); // warning
+    static std::ostream& err(); // errors
+  };
+  
 # define CHRONOMETRO_MAJOR    000
 # define CHRONOMETRO_MINOR    000
 # define CHRONOMETRO_PATCH    000
@@ -836,7 +835,7 @@ inline namespace chronometro
     if _stz_impl_EXPECTED(_total_fmt)
     {
       _stz_impl_DECLARE_LOCK(_chronometro_impl::_out_mtx);
-      io::out << _chronometro_impl::_total_fmt(duration, _total_fmt, _iterations) << std::endl;
+      io::out() << _chronometro_impl::_total_fmt(duration, _total_fmt, _iterations) << std::endl;
     }
 
     return false;
@@ -850,7 +849,7 @@ inline namespace chronometro
     if (_split_fmt)
     {
       _stz_impl_DECLARE_LOCK(_chronometro_impl::_out_mtx);
-      io::out << _chronometro_impl::_split_fmt(split, _split_fmt, _iterations - _remaining) << std::endl;
+      io::out() << _chronometro_impl::_split_fmt(split, _split_fmt, _iterations - _remaining) << std::endl;
     }
 
     --_remaining;
@@ -865,7 +864,7 @@ inline namespace chronometro
     if _stz_impl_EXPECTED(_total_fmt)
     {
       _stz_impl_DECLARE_LOCK(_chronometro_impl::_out_mtx);
-      io::out << _chronometro_impl::_total_fmt(duration, _total_fmt, _iterations) << std::endl;
+      io::out() << _chronometro_impl::_total_fmt(duration, _total_fmt, _iterations) << std::endl;
     }
   }
 
@@ -888,6 +887,14 @@ inline namespace chronometro
   {
     return _measurement->avoid();
   }
+//*///------------------------------------------------------------------------------------------------------------------
+# define _stz_impl_IO(NAME, LINK) std::ostream& io::NAME() { static std::ostream NAME(LINK.rdbuf());  return NAME; }
+  _stz_impl_IO(out, std::cout)
+  _stz_impl_IO(dbg, std::clog)
+  _stz_impl_IO(wrn, std::cerr)
+  _stz_impl_IO(err, std::cerr)
+# undef _stz_impl_IO
+//*///------------------------------------------------------------------------------------------------------------------
 }
 //*///------------------------------------------------------------------------------------------------------------------
   inline namespace _literals

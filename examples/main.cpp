@@ -112,5 +112,7 @@ int main()
 
     iteration.start();
     stz::sleep(2); // measured
+
+    stz::sleep(std::chrono::microseconds(1));
   }
 }
